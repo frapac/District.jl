@@ -22,7 +22,6 @@ end
 
 
 @testset "Data" begin
-
     ts = TimeSpan(0, 1)
 
     @testset "Price" begin
@@ -43,6 +42,16 @@ end
             @test isa(wt, Array{Float64})
             @test length(wt) == 96
         end
+    end
+end
+
+
+@testset "Uncertainties" begin
+    ts = TimeSpan(0, 1)
+
+    @testset "Demands" begin
+        demands = loadnoise(Demands(), ts)
+        @test isa(demands, Array{Float64, 3})
     end
 end
 

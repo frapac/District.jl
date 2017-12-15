@@ -31,6 +31,7 @@ function loadnoise(::Demands, ts::AbstractTimeSpan, idh=1)
     return noises
 end
 
+
 ################################################################################
 immutable PVProduction <: AbstractUncertainty end
 

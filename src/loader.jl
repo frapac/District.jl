@@ -1,11 +1,9 @@
 
-function generate_db()
-    println("Load data")
-    db = @time load("$PATH_DATA/db.jld")
+function getdb()
+    db = load("data/db.jld")
     return db
 end
 
-#= getdb = generate_db() =#
 
 
 function loadweather()
