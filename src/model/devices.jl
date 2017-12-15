@@ -28,6 +28,7 @@ end
 
 # R6C2 model
 struct R6C2 <: AbstractDevice
+    name::Symbol
     Cw::Float64
     Giw::Float64
     Gwe::Float64
@@ -36,4 +37,10 @@ struct R6C2 <: AbstractDevice
     Rw::Float64
     Rs::Float64
     λe::Float64
+end
+
+
+# CHP model
+struct CHP <: AbstractDevice
+    #TODO
 end

@@ -10,7 +10,7 @@ using Scenarios
 
 WD = pwd()
 
-include("loader.jl")
+#= include("loader.jl") =#
 
 
 end
