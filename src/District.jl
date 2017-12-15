@@ -12,5 +12,6 @@ WD = pwd()
 
 #= include("loader.jl") =#
 
+include("model/devices.jl")
 
 end

@@ -28,21 +28,23 @@ end
 
 """ Get solar irradiation."""
 function get_irradiation(env::R6C2, ts::TimeSpan)
-    NTIME = 96*ndays
+    day = ts.day
+    ntime = ntimesteps(ts)
+    DT = ts.δt
 
     # orientation of walls
     beta = [pi/2, pi/2, pi/2, pi/2, 0]
     gamma = [-pi, -pi/2, 0, pi/2, 0]
 
-    G_extrad = zeros(NTIME)
-    G_intrad = zeros(NTIME)
+    G_extrad = zeros(ntime)
+    G_intrad = zeros(ntime)
 
-    for t=1:NTIME
+    for t=1:ntime
         Ib = irrad_normal[t]
         Id = irrad_horizontal[t]
 
-        theta_zenith = get_zenith(t*Params.DT, day, Params.LATITUDE)
-        azimut = get_azimuth(t*Params.DT, day, Params.ALTITUDE)
+        theta_zenith = get_zenith(t*DT, day, Params.LATITUDE)
+        azimut = get_azimuth(t*DT, day, Params.ALTITUDE)
         incidence = cos.(theta_zenith - beta).*cos.(azimut - gamma)
 
         Ib_vec = max.(0, Ib * incidence)
