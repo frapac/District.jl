@@ -1,5 +1,4 @@
 # Definition of generic devices
-using JSON
 
 export Battery, HotWaterTank, CHP, R6C2
 # TODO: load devices with JSON
@@ -48,7 +47,7 @@ struct R6C2 <: AbstractDevice
     name::Symbol
     Ssol::Float64
     Surf_window::Float64
-    Surf_wall::Float64
+    Surf_wall::Vector{Float64}
     H::Float64
 
     Ci::Float64

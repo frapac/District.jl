@@ -1,4 +1,7 @@
 # Generic models
+# TODO: change files' name
+
+export TimeSpan
 
 abstract type AbstractTimeSpan end
 
