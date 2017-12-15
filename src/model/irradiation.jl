@@ -2,6 +2,9 @@
 # Compute solar irradiation
 ################################################################################
 
+#TODO: rename get_irradiation
+export get_irradiation
+
 """Get declinaison."""
 get_declinaison(day::Int) = asin(0.398 * sin((0.985 * day - 80)*pi/180))
 
@@ -32,6 +35,9 @@ function get_irradiation(env::R6C2, ts::TimeSpan)
     ntime = ntimesteps(ts)
     DT = ts.δt
 
+    irradbeam = loadweather(BHI(), ts)
+    irraddiffuse = loadweather(DHI(), ts)
+
     # orientation of walls
     beta = [pi/2, pi/2, pi/2, pi/2, 0]
     gamma = [-pi, -pi/2, 0, pi/2, 0]
@@ -40,21 +46,21 @@ function get_irradiation(env::R6C2, ts::TimeSpan)
     G_intrad = zeros(ntime)
 
     for t=1:ntime
-        Ib = irrad_normal[t]
-        Id = irrad_horizontal[t]
+        Ib = irradbeam[t]
+        Id = irraddiffuse[t]
 
-        theta_zenith = get_zenith(t*DT, day, Params.LATITUDE)
-        azimut = get_azimuth(t*DT, day, Params.ALTITUDE)
+        theta_zenith = get_zenith(t*DT, day, env.latitude)
+        azimut = get_azimuth(t*DT, day, env.altitude)
         incidence = cos.(theta_zenith - beta).*cos.(azimut - gamma)
 
         Ib_vec = max.(0, Ib * incidence)
         Id_vec = Id .* (1 + cos.(beta))/2
         Ig = Ib .* cos(theta_zenith) + Id
-        Ir_vec = Params.albedo * Ig .* (1 - cos.(beta))/2
+        Ir_vec = env.albedo * Ig .* (1 - cos.(beta))/2
 
         Itot = Ib_vec + Id_vec + Ir_vec
-        G_extrad[t] = sum(Itot.*Params.Surf_wall)*Params.esp
-        G_intrad[t] = sum(Itot*Params.fframe.*Params.Surf_window)*Params.Fv
+        G_extrad[t] = sum(Itot.*env.Surf_wall)*env.esp
+        G_intrad[t] = sum(Itot*env.fframe.*env.Surf_window)*env.Fv
     end
 
     return G_extrad, G_intrad

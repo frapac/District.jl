@@ -18,7 +18,11 @@ include("loader.jl")
 include("model/generic.jl")
 # data
 include("model/data.jl")
+# uncertainties
+include("model/uncertainties.jl")
 # Definition of devices
 include("model/devices.jl")
+# Compute irradiance
+include("model/irradiation.jl")
 
 end

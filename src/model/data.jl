@@ -15,8 +15,6 @@ function loadprice end
 
 # Off/On Peak tariffs
 immutable EDFPrice <: AbstractPrice end
-
-
 function loadprice(::EDFPrice, ts::AbstractTimeSpan)
     tariff = JSON.parsefile("data/tariffs/elec/edf.json")
     ntime = ntimesteps(ts)
@@ -30,7 +28,6 @@ end
 
 
 immutable EPEXPrice <: AbstractPrice end
-
 loadprice(::EPEXPrice, ts::AbstractTimeSpan) = loaddata(ts, 16)
 
 
@@ -61,6 +58,7 @@ end
 ################################################################################
 # Weather Data
 abstract type AbstractWeatherData <: AbstractData end
+function loadweather end
 
 immutable OutdoorTemperature <: AbstractWeatherData end
 loadweather(::OutdoorTemperature, ts::AbstractTimeSpan) = loaddata(ts, 1)

@@ -44,7 +44,6 @@ end
             @test length(wt) == 96
         end
     end
-
 end
 
 
@@ -54,4 +53,19 @@ end
         st = Stock(ids)
         @test isa(st, Stock)
     end
+end
+
+
+@testset "Irradiation" begin
+    env = R6C2("rt1988")
+    ts = TimeSpan(0, 1)
+
+    iwall, iwindow = get_irradiation(env, ts)
+
+    for tab in [iwall, iwindow]
+        @test isa(tab, Array{Float64})
+        @test length(tab) == 96
+    end
+
+
 end

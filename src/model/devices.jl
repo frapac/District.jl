@@ -45,6 +45,9 @@ end
 # R6C2 model
 struct R6C2 <: AbstractDevice
     name::Symbol
+    altitude::Float64
+    latitude::Float64
+
     Ssol::Float64
     Surf_window::Float64
     Surf_wall::Vector{Float64}
@@ -68,6 +71,9 @@ end
 function R6C2(name)
     path = "$WD/data/devices/house/$name.json"
     params = JSON.parsefile(path)
+
+    altitude = params["ALTITUDE"]
+    latitude = params["LATITUDE"]
 
     # height
     H = params["H"]
@@ -111,7 +117,8 @@ function R6C2(name)
     fframe = params["fframe"]
     albedo = params["albedo"]
     esp = params["esp"]
-    R6C2(name, Ssol, Surf_window, Surf_wall, H,
+    R6C2(name, altitude, latitude,
+         Ssol, Surf_window, Surf_wall, H,
          Ci, Cw, Giw, Gie, Gwe, Ri, Rs, Rw, Re,
          Fv, fframe, albedo, esp)
 end
