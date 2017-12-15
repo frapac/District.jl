@@ -24,5 +24,7 @@ include("model/uncertainties.jl")
 include("model/devices.jl")
 # Compute irradiance
 include("model/irradiation.jl")
+# Buildings definition
+include("model/building.jl")
 
 end
