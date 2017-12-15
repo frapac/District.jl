@@ -25,6 +25,7 @@ function Battery(name::String)
             data["rhoc"], data["rhod"], data["ALPHA_B"])
 end
 
+
 ################################################################################
 # EHWT
 struct HotWaterTank <: AbstractDevice
@@ -39,6 +40,7 @@ function HotWaterTank(name::String)
 
     HotWaterTank(name, data["ALPHA_H"], data["eta"], 1)
 end
+
 
 ################################################################################
 # R6C2 model
@@ -114,7 +116,6 @@ function R6C2(name)
          Ci, Cw, Giw, Gie, Gwe, Ri, Rs, Rw, Re,
          Fv, fframe, albedo, esp)
 end
-
 
 
 ################################################################################

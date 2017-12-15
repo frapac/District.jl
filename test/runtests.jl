@@ -17,7 +17,6 @@ using District
     chp = CHP("chp0")
     @test isa(chp, CHP)
 
-
     th  = R6C2("rt1988")
+    @test isa(th, R6C2)
 end
-
