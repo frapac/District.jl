@@ -46,10 +46,10 @@ end
 # R6C2 model
 struct R6C2 <: AbstractDevice
     name::Symbol
-    Ssol
-    Surf_window
-    Surf_wall
-    H
+    Ssol::Float64
+    Surf_window::Float64
+    Surf_wall::Float64
+    H::Float64
 
     Ci::Float64
     Cw::Float64

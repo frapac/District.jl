@@ -7,16 +7,9 @@ using District
 
 
 @testset "Devices" begin
-
-    bat = Battery("bat0")
-    @test isa(bat, Battery)
-
-    hwt = HotWaterTank("ehwt0")
-    @test isa(hwt, HotWaterTank)
-
-    chp = CHP("chp0")
-    @test isa(chp, CHP)
-
-    th  = R6C2("rt1988")
-    @test isa(th, R6C2)
+    for (Stock, ids) in zip([Battery, HotWaterTank, CHP, R6C2],
+                            ["bat0", "ehwt0", "chp0", "rt1988"])
+        st = Stock(ids)
+        @test isa(st, Stock)
+    end
 end
