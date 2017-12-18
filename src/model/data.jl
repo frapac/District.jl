@@ -10,11 +10,12 @@ abstract type AbstractData end
 ################################################################################
 # Definition of prices
 abstract type AbstractPrice <: AbstractData end
+abstract type AbstractElecPrice <: AbstractPrice end
 
 function loadprice end
 
 # Off/On Peak tariffs
-immutable EDFPrice <: AbstractPrice end
+immutable EDFPrice <: AbstractElecPrice end
 function loadprice(::EDFPrice, ts::AbstractTimeSpan)
     tariff = JSON.parsefile("data/tariffs/elec/edf.json")
     ntime = ntimesteps(ts)
@@ -27,7 +28,7 @@ function loadprice(::EDFPrice, ts::AbstractTimeSpan)
 end
 
 
-immutable EPEXPrice <: AbstractPrice end
+immutable EPEXPrice <: AbstractElecPrice end
 loadprice(::EPEXPrice, ts::AbstractTimeSpan) = loaddata(ts, 16)
 
 
