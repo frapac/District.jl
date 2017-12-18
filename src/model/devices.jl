@@ -24,7 +24,7 @@ function Battery(name::String)
 end
 
 function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
-    dyn = :(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))
+    dyn = [:(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
     load = :(u[$uindex] - u[$(uindex+1)])
     return dyn, load
 end
@@ -54,7 +54,7 @@ end
 
 # TODO: consistency with demands
 function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
-    dyn = :($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))
+    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))]
     load = :()
     return dyn, load
 end
@@ -155,17 +155,17 @@ end
 function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
     load = :(u[$uindex])
     dt2 = dt * 3600
-    dyn = :(
+    dyn = [:(
         x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
                                         $(thm.Gwe)*($(p["text"])[t]-x[$xindex]) +
                                         $(thm.Re)/($(thm.Re)+$(thm.Rw))*$(p["pext"])[t] +
                                         $(thm.Ri)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
-                          1000*$(thm.λe)*u[$xindex]), # wall's temperature
-        x[$(xindex+1)] + $dt2/$(thm.Ci)*($(thm.Giw)*(x[$xindex]-x[$(xindex+1)]) +
+                                        1000*$(thm.λe)*u[$xindex])), # wall's temperature
+        :(x[$(xindex+1)] + $dt2/$(thm.Ci)*($(thm.Giw)*(x[$xindex]-x[$(xindex+1)]) +
                                          $(thm.Gie)*($(p["text"])[t]-x[$(xindex+1)]) +
                                          $(thm.Rs)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
                           1000*$(1-thm.λe)*u[$uindex]) # inner temperature
-       )
+         )]
     return dyn, load
 end
 

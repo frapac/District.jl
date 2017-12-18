@@ -68,9 +68,20 @@ function final_cost_dh(model, m)
 end
 
 #TODO
-function getbounds(house::House)
-    xbounds = [(Params.BMIN, Params.BMAX), (0, 12), (-50, 100), (-50, 100)]
-    ubounds = [(0, Params.DELTA_B_MAX), (0, Params.DELTA_B_MAX), (0., heater), (0, maxdhw)]
+function xbounds(house::House)
+    xb= []
+    for dev in house.devices
+        xb = vcat(xb, xbounds(dev))
+    end
+    return xb
+end
+
+function ubounds(house::House)
+    ub= []
+    for dev in house.devices
+        ub = vcat(ub, ubounds(dev))
+    end
+    return ub
 end
 
 
@@ -91,18 +102,18 @@ function build!(house::House, nbins=5)
 
     xindex = 1
     uindex = 1
-    exdyn = "["
+    exdyn = Expr(:vect)
     for dev in house.devices
         dyn, load = parsedevice(dev, xindex, uindex, house.time.δt, params)
         xindex += nstates(dev)
         uindex += ncontrols(dev)
-        exdyn *= "$dyn,"
+
+        for d in dyn
+            push!(exdyn.args, d)
+        end
     end
 
-    exdyn *= "]"
-    exdynm = parse(exdyn)
-
-    @eval dynam(t, x, u, w) = $exdynm
+    @eval dynam(t, x, u, w) = $exdyn
     return dynam
 
 
