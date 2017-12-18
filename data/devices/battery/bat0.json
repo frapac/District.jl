@@ -1,0 +1,9 @@
+{
+    "ALPHA_B":0.997,
+    "BETA_B": 0.9,
+    "DELTA_B_MAX": 0.6,
+    "rhoc": 0.95,
+    "rhod": 0.95,
+    "BMAX": 3,
+    "BMIN": 0.5
+}

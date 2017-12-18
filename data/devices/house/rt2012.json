@@ -1,0 +1,21 @@
+{
+    "ALTITUDE":0,
+    "LATITUDE": 45,
+    "Sc":88,
+    "H":2.5,
+    "Surf_window":[0.81,3.36,5.04,4.55,0.0],
+    "Umur": 0.13,
+    "Ufen": 1.226,
+    "Utoit": 0.13,
+    "Uplancher": 0.13,
+    "N_floor": 1,
+    "Ci":2953500,
+    "Cw":88875200,
+    "Gs":3685,
+    "Rinf":100000,
+    "Fv":0.553,
+    "fframe":0.9,
+    "albedo":0.0,
+    "esp":0.6,
+    "lambdae": 0.35
+}
