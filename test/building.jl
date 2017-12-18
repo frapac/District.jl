@@ -23,9 +23,10 @@ using District
     thm = R6C2("rt1988")
     add!(house, thm)
 
-    dynam = District.build!(house)
+    dynam, cost = District.build!(house)
     println(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)))
     println(dynam(40, [4, 0, 0, 0], zeros(10), zeros(3)))
+    println(cost(40, [4, 0, 0, 0], zeros(10), zeros(3)))
 
     District.xbounds(house)
     District.ubounds(house)

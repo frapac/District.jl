@@ -103,30 +103,22 @@ function build!(house::House, nbins=5)
     xindex = 1
     uindex = 1
     exdyn = Expr(:vect)
+    excost = Expr(:call, :+)
     for dev in house.devices
         dyn, load = parsedevice(dev, xindex, uindex, house.time.δt, params)
         xindex += nstates(dev)
         uindex += ncontrols(dev)
 
+        push!(excost.args, load)
         for d in dyn
             push!(exdyn.args, d)
         end
     end
 
+    println(excost)
     @eval dynam(t, x, u, w) = $exdyn
-    return dynam
-
-
-    #= model = StochDynamicProgramming.LinearSPModel(ntime, ubounds, =#
-    #=                                               x0, buildcost(), =#
-    #=                                               dynam, laws, =#
-    #=                                               info=:HD, =#
-    #=                                               Vfinal=fcost) =#
-
-    #= println("Size of perturbations: ", laws[1].supportSize) =#
-    #= set_state_bounds(model, xbounds) =#
-
-    #= return model =#
+    @eval cost(t, x, u, w) = $excost
+    return dynam, cost
 end
 
 

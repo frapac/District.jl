@@ -23,6 +23,7 @@ function Battery(name::String)
             data["rhoc"], data["rhod"], data["ALPHA_B"])
 end
 
+# TODO: add alpha_b_b_b_b_b_b_b_b
 function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
     dyn = [:(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
     load = :(u[$uindex] - u[$(uindex+1)])
@@ -55,7 +56,7 @@ end
 # TODO: consistency with demands
 function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
     dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))]
-    load = :()
+    load = :(0)
     return dyn, load
 end
 
