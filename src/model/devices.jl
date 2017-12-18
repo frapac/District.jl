@@ -1,7 +1,6 @@
 # Definition of generic devices
 
 export Battery, HotWaterTank, CHP, R6C2
-# TODO: load devices with JSON
 
 abstract type AbstractDevice end
 
@@ -24,6 +23,17 @@ function Battery(name::String)
             data["rhoc"], data["rhod"], data["ALPHA_B"])
 end
 
+function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
+    dyn = :(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))
+    load = :(u[$uindex] - u[$(uindex+1)])
+    return dyn, load
+end
+
+nstates(bat::Battery) = 1
+ncontrols(bat::Battery) = 2
+xbounds(bat::Battery) = [(bat.binf, bat.bup)]
+ubounds(bat::Battery) = [(0., bat.δb), (0., bat.δb)]
+
 
 ################################################################################
 # EHWT
@@ -37,8 +47,23 @@ function HotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
+    #TODO: clean output's yield
     HotWaterTank(name, data["ALPHA_H"], data["eta"], 1)
 end
+
+
+# TODO: consistency with demands
+function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
+    dyn = :($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))
+    load = :()
+    return dyn, load
+end
+
+nstates(hwt::HotWaterTank) = 1
+ncontrols(hwt::HotWaterTank) = 1
+#TODO: dry bounds
+xbounds(hwt::HotWaterTank) = [(0., 12.)]
+ubounds(hwt::HotWaterTank) = [(0., 20.)]
 
 
 ################################################################################
@@ -67,6 +92,7 @@ struct R6C2 <: AbstractDevice
     fframe::Float64
     albedo::Float64
     esp::Float64
+    λe::Float64
 end
 function R6C2(name)
     path = "$WD/data/devices/house/$name.json"
@@ -117,15 +143,42 @@ function R6C2(name)
     fframe = params["fframe"]
     albedo = params["albedo"]
     esp = params["esp"]
+    le = params["lambdae"]
     R6C2(name, altitude, latitude,
          Ssol, Surf_window, Surf_wall, H,
          Ci, Cw, Giw, Gie, Gwe, Ri, Rs, Rw, Re,
-         Fv, fframe, albedo, esp)
+         Fv, fframe, albedo, esp, le)
 end
+
+
+# TODO: gerer params exterieurs
+function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
+    load = :(u[$uindex])
+    dt2 = dt * 3600
+    dyn = :(
+        x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
+                                        $(thm.Gwe)*($(p["text"])[t]-x[$xindex]) +
+                                        $(thm.Re)/($(thm.Re)+$(thm.Rw))*$(p["pext"])[t] +
+                                        $(thm.Ri)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
+                          1000*$(thm.λe)*u[$xindex]), # wall's temperature
+        x[$(xindex+1)] + $dt2/$(thm.Ci)*($(thm.Giw)*(x[$xindex]-x[$(xindex+1)]) +
+                                         $(thm.Gie)*($(p["text"])[t]-x[$(xindex+1)]) +
+                                         $(thm.Rs)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
+                          1000*$(1-thm.λe)*u[$uindex]) # inner temperature
+       )
+    return dyn, load
+end
+
+nstates(thm::R6C2) = 2
+ncontrols(thm::R6C2) = 1
+xbounds(thm::R6C2) = [(0., 50.), (0., 50.)]
+#TODO: dry heater
+ubounds(thm::R6C2) = [(0., 6.)]
 
 
 ################################################################################
 # CHP model
+# TODO: implement CHP
 struct CHP <: AbstractDevice
     name
     power

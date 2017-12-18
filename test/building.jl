@@ -14,4 +14,16 @@ using District
     b = Battery("bat0")
     add!(house, b)
     @test length(house.devices) == 1
+    ex = District.parsedevice(b, 1, 1, .25)[1]
+
+    hwt = HotWaterTank("ehwt0")
+    add!(house, hwt)
+    ex = District.parsedevice(hwt, 1, 1, .25)
+
+    thm = R6C2("rt1988")
+    add!(house, thm)
+
+
+    dynam = District.build!(house)
+    println(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)))
 end

@@ -6,7 +6,7 @@ module District
 
 using JLD
 using JuMP
-using Scenarios
+using Scenarios, StochDynamicProgramming
 using JSON
 
 WD = pwd()
