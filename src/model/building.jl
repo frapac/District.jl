@@ -1,6 +1,4 @@
 
-# TODO: dry P_TH
-# TODO: define p_inj
 export House, add!
 export nstocks
 
@@ -26,8 +24,11 @@ add!(h::House, p::AbstractPrice) = push!(h.prices, p)
 nstocks(h::House) = sum(nstates.(h.devices))
 
 
+################################################################################
+# COST DEFINITION
+################################################################################
 function objective(house::House)
-    if has(house, R6C2)
+    if hasdevice(house, R6C2)
         return _objectivethermal(house)
     else
         return _objectiveelec(house)
@@ -101,7 +102,10 @@ function final_cost_dh(model, m)
     end
 end
 
-#TODO
+
+################################################################################
+# BOUNDS DEFINITION
+################################################################################
 function xbounds(house::House)
     xb= Tuple{Float64, Float64}[]
     for dev in house.devices
@@ -119,7 +123,10 @@ function ubounds(house::House)
 end
 
 
-function buildlaw(house::House)
+################################################################################
+# LAWS DEFINITION
+################################################################################
+function buildlaws(house::House, nbins)
     demands = loadnoise(Demands(), house.time)
     laws = WhiteNoise(demands, nbins, KMeans())
     # TODO
@@ -128,6 +135,9 @@ function buildlaw(house::House)
 end
 
 
+################################################################################
+# DYNAMICS DEFINITION
+################################################################################
 function builddynamic(house::House)
     x0=[.6, 6, 16, 16]
     ntime = ntimesteps(house.time)
@@ -154,9 +164,15 @@ function builddynamic(house::House)
     return dynam
 end
 
+
+
+################################################################################
+# LOAD DEFINITION
+################################################################################
 function buildload(house::House)
     ntime = ntimesteps(house.time)
 
+    # build load corresponding to device
     xindex = 1
     uindex = 1
     excost = Expr(:call, :+)
@@ -166,29 +182,24 @@ function buildload(house::House)
         push!(excost.args, load)
     end
 
+    # build load corresponding to noise
+    windex = 1
+    for ξ in house.noises
+        push!(excost.args, elecload(ξ, windex))
+        windex += nnoise(ξ)
+    end
+
+    println(excost)
     @eval elecload(t, x, u, w) = $excost
     return elecload
 end
 
 
-function dynamic(t, x, u, w)
-    return [Params.ALPHA_B * x[1] + Params.DT*(Params.ρc*u[1] - 1/Params.ρd*u[2]), # Battery
-            x[2] + Params.DT*(u[4]*Params.ETA_R - w[2]), # Hot water tank
-            x[3] + Params.DT*3600/Params.Cw*(Params.Giw*(x[4]-x[3]) +
-                                        Params.Gwe*(w[3]-x[3]) +
-                                        Params.Re/(Params.Re+Params.Rw)*w[4] +
-                                        Params.Ri/(Params.Ri+Params.Rs)*α*w[4] +
-                                        1000*.35*u[3]), # wall's temperature
-            x[4] + Params.DT*3600/Params.Ci*(Params.Giw*(x[3]-x[4]) +
-                                        Params.Gie*(w[3]-x[4]) +
-                                        Params.Rs/(Params.Ri+Params.Rs)*α*w[4] +
-                                        1000*.65*u[3])] # inner temperature
-end
 
-
-
-
-"""Get real cost for assessment."""
+################################################################################
+# SIMULATION DEFINITION
+################################################################################
+"""Get real cost for simulation."""
 function get_real_cost(day)
     priceElec, Tcons = get_reference()
 
@@ -207,10 +218,12 @@ end
 realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
 
 
-
+################################################################################
 # UTILS
+################################################################################
 get_irradiation(house::House) = get_irradiation(getdevice(house, R6C2), house.time)
 
 # TODO: avoid side effect
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]
-has(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
+hasdevice(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
+hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1

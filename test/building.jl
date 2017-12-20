@@ -23,6 +23,9 @@ using District
     thm = R6C2("rt1988")
     add!(house, thm)
 
+    wdem = Demands()
+    add!(house, wdem)
+
     dynam = District.builddynamic(house)
     println(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)))
     println(dynam(40, [4, 0, 0, 0], zeros(10), zeros(3)))

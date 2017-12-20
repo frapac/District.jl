@@ -24,7 +24,8 @@ function Battery(name::String)
             data["rhoc"], data["rhod"], data["ALPHA_B"])
 end
 
-# TODO: add alpha_b_b_b_b_b_b_b_b
+
+# TODO: add alpha_b
 function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
     dyn = [:(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
     return dyn
@@ -60,7 +61,7 @@ function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
     return dyn
 end
 
-elecload(hwt::HotWaterTank, uindex) = :(0)
+elecload(hwt::HotWaterTank, uindex) = :(u[$uindex])
 
 nstates(hwt::HotWaterTank) = 1
 ncontrols(hwt::HotWaterTank) = 1
@@ -154,7 +155,6 @@ function R6C2(name)
 end
 
 
-# TODO: gerer params exterieurs
 function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
     dt2 = dt * 3600
     dyn = [:(

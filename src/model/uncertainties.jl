@@ -31,8 +31,13 @@ function loadnoise(::Demands, ts::AbstractTimeSpan, idh=1)
     return noises
 end
 
+elecload(d::Demands, windex) = :(w[$windex])
+nnoise(d::Demands) = 2
+
 
 ################################################################################
 immutable PVProduction <: AbstractUncertainty end
 
 function loadnoise(::PVProduction, ts::AbstractTimeSpan) end
+elecload(p::PVProduction, windex) = :(-w[$windex])
+nnoise(p::PVProduction) = 1
