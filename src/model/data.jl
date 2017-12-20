@@ -73,7 +73,7 @@ abstract type AbstractWeatherData <: AbstractData end
 function loadweather end
 
 immutable OutdoorTemperature <: AbstractWeatherData end
-loadweather(::OutdoorTemperature, ts::AbstractTimeSpan) = loaddata(ts, 1)
+loadweather(::OutdoorTemperature, ts::AbstractTimeSpan) = loaddata(ts, 1) - 273.15
 
 # Beam horizontal
 immutable BHI <: AbstractWeatherData end
