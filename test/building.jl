@@ -27,14 +27,16 @@ using District
     add!(house, wdem)
 
     dynam = District.builddynamic(house)
-    println(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)))
-    println(dynam(40, [4, 0, 0, 0], zeros(10), zeros(3)))
+    @test isa(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)), Vector{Float64})
     load = District.buildload(house)
-    println(load(40, [4, 0, 0, 0], zeros(10), zeros(3)))
+    @test isa(load(40, [4, 0, 0, 0], zeros(10), zeros(3)), Float64)
 
     xb = District.xbounds(house)
     @test length(xb) == nstocks(house)
     District.ubounds(house)
 
     bcost = District.objective(house)
+
+    x0 = [.55, 6., 16., 16.]
+    District.build!(house, 10, x0)
 end

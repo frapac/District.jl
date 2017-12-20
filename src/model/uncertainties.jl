@@ -1,12 +1,13 @@
 # Definition for random variables
 
+# TODO: add quantization bins in Uncertainty?
+
 export loadnoise, Demands
 
 abstract type AbstractUncertainty end
 
 
 function loadnoise end
-function fit end
 
 
 ################################################################################

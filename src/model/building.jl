@@ -5,7 +5,7 @@ export nstocks
 abstract type AbstractBuilding end
 
 
-struct House <: AbstractBuilding
+mutable struct House <: AbstractBuilding
     name::Symbol
     time::AbstractTimeSpan
     devices::Vector{AbstractDevice}
@@ -23,6 +23,33 @@ add!(h::House, p::AbstractPrice) = push!(h.prices, p)
 
 nstocks(h::House) = sum(nstates.(h.devices))
 
+
+function build!(house, nbins, x0)
+    ntime = ntimesteps(house.time)
+    xb = xbounds(house)
+    ub = ubounds(house)
+
+
+    laws = buildlaws(house, nbins)
+    costm = objective(house)
+    fcost = final_cost
+
+    spmodel = StochDynamicProgramming.LinearSPModel(ntime, ub,
+                                                  x0, costm,
+                                                  dynam,
+                                                  tonoiselaws(laws),
+                                                  info=:HD,
+                                                  Vfinal=fcost)
+
+    set_state_bounds(spmodel, xb)
+    house.model = spmodel
+end
+
+
+# temp
+function tonoiselaws(laws::WhiteNoise)
+    NoiseLaw[NoiseLaw(laws[t].support', laws[t].probas) for t in 1:length(laws)]
+end
 
 ################################################################################
 # COST DEFINITION
@@ -127,11 +154,14 @@ end
 # LAWS DEFINITION
 ################################################################################
 function buildlaws(house::House, nbins)
-    demands = loadnoise(Demands(), house.time)
-    laws = WhiteNoise(demands, nbins, KMeans())
-    # TODO
-    #= lawpv = #TODO =#
-    #= laws = prodlaw(lawdemands, lawpv) =#
+
+    laws = WhiteNoise[]
+    for ξ in house.noises
+        demands = loadnoise(ξ, house.time)
+        push!(laws, WhiteNoise(demands, nbins, KMeans()))
+    end
+
+    return Scenarios.prodprocess(laws)
 end
 
 
