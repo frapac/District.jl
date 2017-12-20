@@ -1,5 +1,6 @@
 # Definition of generic devices
 
+# TODO: add check consistency
 export Battery, HotWaterTank, CHP, R6C2
 
 abstract type AbstractDevice end
@@ -26,10 +27,10 @@ end
 # TODO: add alpha_b_b_b_b_b_b_b_b
 function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
     dyn = [:(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
-    load = :(u[$uindex] - u[$(uindex+1)])
-    return dyn, load
+    return dyn
 end
 
+elecload(bat::Battery, uindex) = :(u[$uindex] - u[$(uindex+1)])
 nstates(bat::Battery) = 1
 ncontrols(bat::Battery) = 2
 xbounds(bat::Battery) = [(bat.binf, bat.bup)]
@@ -56,9 +57,10 @@ end
 # TODO: consistency with demands
 function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
     dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))]
-    load = :(0)
-    return dyn, load
+    return dyn
 end
+
+elecload(hwt::HotWaterTank, uindex) = :(0)
 
 nstates(hwt::HotWaterTank) = 1
 ncontrols(hwt::HotWaterTank) = 1
@@ -154,7 +156,6 @@ end
 
 # TODO: gerer params exterieurs
 function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
-    load = :(u[$uindex])
     dt2 = dt * 3600
     dyn = [:(
         x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
@@ -167,9 +168,10 @@ function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
                                          $(thm.Rs)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
                           1000*$(1-thm.λe)*u[$uindex]) # inner temperature
          )]
-    return dyn, load
+    return dyn
 end
 
+elecload(thm::R6C2, uindex) = :(u[$uindex])
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 1
 xbounds(thm::R6C2) = [(0., 50.), (0., 50.)]

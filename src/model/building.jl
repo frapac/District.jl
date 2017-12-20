@@ -1,5 +1,8 @@
 
+# TODO: dry P_TH
+# TODO: define p_inj
 export House, add!
+export nstocks
 
 abstract type AbstractBuilding end
 
@@ -20,18 +23,49 @@ add!(h::House, w::AbstractUncertainty) = push!(h.noises, w)
 add!(h::House, p::AbstractPrice) = push!(h.prices, p)
 
 
+nstocks(h::House) = sum(nstates.(h.devices))
 
 
-function buildcost(ts::TimeSpan)
+function objective(house::House)
+    if has(house, R6C2)
+        return _objectivethermal(house)
+    else
+        return _objectiveelec(house)
+    end
+end
+
+# TODO: clean objective dispatch
+# FIXME: must be run after buildload
+function _objectiveprice(house::House)
     p_elec = loadprice(EDFPrice(), ts)
-    p_therm = loadsetpoint(NightSetPoint(), ts)
+    p_inj = loadprice(EDFInjection(), ts)
+
 
     function costm(m, t, x, u, w)
         zel1 = @JuMP.variable(m, lowerbound=0)
-        @constraint(m, zel1 >= p_elec[t] * (w[1] + u[4] - w[5] - u[2] + u[1] + u[3]))
+        @constraint(m, zel1 >= p_elec[t] * elecload(t, x, u, w))
+        @constraint(m, zel1 >= - p_inj * elecload(t, x, u, w))
 
+        return JuMP.AffExpr(zel1)
+    end
+    return costm
+end
+
+function _objectivethermal(house::House)
+    p_elec = loadprice(EDFPrice(), house.time)
+    p_therm = loadsetpoint(NightSetPoint(), house.time)
+    p_inj = loadprice(EDFInjection(), house.time)
+    p_th = loadprice(Comfort(), house.time)
+
+
+    function costm(m, t, x, u, w)
+        zel1 = @JuMP.variable(m, lowerbound=0)
+        @constraint(m, zel1 >= p_elec[t] * elecload(t, x, u, w))
+        @constraint(m, zel1 >= - p_inj * elecload(t, x, u, w))
+
+        # TODO: handle HVAC
         zth1 = @JuMP.variable(m, lowerbound=0)
-        @constraint(m, zth1 >= -Params.P_TH*(x[4] - p_therm[t] + 1))
+        @constraint(m, zth1 >= -p_th*(x[4] - p_therm[t] + 1))
 
         return JuMP.AffExpr(zel1 + zth1)
     end
@@ -69,7 +103,7 @@ end
 
 #TODO
 function xbounds(house::House)
-    xb= []
+    xb= Tuple{Float64, Float64}[]
     for dev in house.devices
         xb = vcat(xb, xbounds(dev))
     end
@@ -77,7 +111,7 @@ function xbounds(house::House)
 end
 
 function ubounds(house::House)
-    ub= []
+    ub= Tuple{Float64, Float64}[]
     for dev in house.devices
         ub = vcat(ub, ubounds(dev))
     end
@@ -85,7 +119,16 @@ function ubounds(house::House)
 end
 
 
-function build!(house::House, nbins=5)
+function buildlaw(house::House)
+    demands = loadnoise(Demands(), house.time)
+    laws = WhiteNoise(demands, nbins, KMeans())
+    # TODO
+    #= lawpv = #TODO =#
+    #= laws = prodlaw(lawdemands, lawpv) =#
+end
+
+
+function builddynamic(house::House)
     x0=[.6, 6, 16, 16]
     ntime = ntimesteps(house.time)
     pint, pext = get_irradiation(house)
@@ -94,31 +137,37 @@ function build!(house::House, nbins=5)
     params["pint"] = pint
     params["pext"] = pext
 
-    demands = loadnoise(Demands(), house.time)
-    laws = WhiteNoise(demands, nbins, KMeans())
-    # TODO
-    #= lawpv = #TODO =#
-    #= laws = prodlaw(lawdemands, lawpv) =#
-
     xindex = 1
     uindex = 1
     exdyn = Expr(:vect)
-    excost = Expr(:call, :+)
     for dev in house.devices
-        dyn, load = parsedevice(dev, xindex, uindex, house.time.δt, params)
+        dyn = parsedevice(dev, xindex, uindex, house.time.δt, params)
         xindex += nstates(dev)
         uindex += ncontrols(dev)
 
-        push!(excost.args, load)
         for d in dyn
             push!(exdyn.args, d)
         end
     end
 
-    println(excost)
     @eval dynam(t, x, u, w) = $exdyn
-    @eval cost(t, x, u, w) = $excost
-    return dynam, cost
+    return dynam
+end
+
+function buildload(house::House)
+    ntime = ntimesteps(house.time)
+
+    xindex = 1
+    uindex = 1
+    excost = Expr(:call, :+)
+    for dev in house.devices
+        load = elecload(dev, uindex)
+        uindex += ncontrols(dev)
+        push!(excost.args, load)
+    end
+
+    @eval elecload(t, x, u, w) = $excost
+    return elecload
 end
 
 
@@ -164,3 +213,4 @@ get_irradiation(house::House) = get_irradiation(getdevice(house, R6C2), house.ti
 
 # TODO: avoid side effect
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]
+has(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1

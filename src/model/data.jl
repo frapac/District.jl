@@ -32,7 +32,18 @@ immutable EPEXPrice <: AbstractElecPrice end
 loadprice(::EPEXPrice, ts::AbstractTimeSpan) = loaddata(ts, 16)
 
 
+immutable Comfort <: AbstractPrice end
+function loadprice(::Comfort, ts::AbstractTimeSpan)
+    tariff = JSON.parsefile("data/tariffs/comfort/com0.json")
+    return tariff["comfort"]
+end
 
+
+immutable EDFInjection <: AbstractElecPrice end
+function loadprice(::EDFInjection, ts::AbstractTimeSpan)
+    tariff = JSON.parsefile("data/tariffs/elec/edf.json")
+    return tariff["inj"]
+end
 
 ################################################################################
 # Definition of temperature setpoints
