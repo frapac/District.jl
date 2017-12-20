@@ -174,7 +174,7 @@ end
 elecload(thm::R6C2, uindex) = :(u[$uindex])
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 1
-xbounds(thm::R6C2) = [(0., 50.), (0., 50.)]
+xbounds(thm::R6C2) = [(-50., 100.), (-50., 100.)]
 #TODO: dry heater
 ubounds(thm::R6C2) = [(0., 6.)]
 

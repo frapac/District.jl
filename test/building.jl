@@ -19,9 +19,12 @@ using District
     hwt = HotWaterTank("ehwt0")
     add!(house, hwt)
     ex = District.parsedevice(hwt, 1, 1, .25)
+    @test nstocks(house) == 2
 
     thm = R6C2("rt1988")
     add!(house, thm)
+
+    @test nstocks(house) == 4
 
     wdem = Demands()
     add!(house, wdem)

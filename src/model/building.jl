@@ -2,8 +2,10 @@
 export House, add!
 export nstocks
 
+
 abstract type AbstractBuilding end
 
+PENAL_TANK = 1.
 
 mutable struct House <: AbstractBuilding
     name::Symbol

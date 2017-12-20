@@ -14,6 +14,8 @@ WD = pwd()
 
 # Functions to load data from files
 include("loader.jl")
+
+# MODEL
 # generic functions
 include("model/generic.jl")
 # data
@@ -27,4 +29,7 @@ include("model/irradiation.jl")
 # Buildings definition
 include("model/building.jl")
 
+
+# ALGO
+include("algo/solvers.jl")
 end
