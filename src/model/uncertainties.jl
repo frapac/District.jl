@@ -17,7 +17,7 @@ function loadnoise(::Demands, ts::AbstractTimeSpan, idh=1)
     # select optimization scenarios subset
     nf, nt = 1, 1000
     ntime = ntimesteps(ts)
-    ti, te = unravel(ts)
+    wcycle = weekcycle(ts)
 
     db = getdb()
 
@@ -27,8 +27,8 @@ function loadnoise(::Demands, ts::AbstractTimeSpan, idh=1)
     noises = zeros(ntime, 1000, 2)
 
     # Select corresponding data :
-    noises[:, :, 1] = elec[ti:te, nf:nt]
-    noises[:, :, 2] = dhw[ti:te, nf:nt]
+    noises[:, :, 1] = elec[wcycle, nf:nt]
+    noises[:, :, 2] = dhw[wcycle, nf:nt]
     return noises
 end
 
