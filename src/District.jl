@@ -32,4 +32,5 @@ include("model/building.jl")
 
 # ALGO
 include("algo/solvers.jl")
+include("algo/sddp.jl")
 end

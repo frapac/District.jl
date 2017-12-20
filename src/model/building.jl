@@ -3,7 +3,9 @@ export House, add!
 export nstocks
 
 
-abstract type AbstractBuilding end
+# Definition of node in graph
+abstract type AbstractNode end
+abstract type AbstractBuilding <: AbstractNode end
 
 PENAL_TANK = 1.
 
