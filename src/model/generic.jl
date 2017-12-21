@@ -20,5 +20,5 @@ function weekcycle(ts::TimeSpan)
     # number of timesteps per week
     weekts = ts.nt * 7
     ti, tf = unravel(ts)
-    return rem.(ti:tf, weekts)
+    return rem.((ti:tf)-1, weekts) + 1
 end

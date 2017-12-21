@@ -17,6 +17,10 @@ end
     @testset "TimeSpan" begin
         ts = TimeSpan(1, 7)
         @test District.ntimesteps(ts) == 7 * 96
+        @test isa(District.unravel(ts), Tuple{Int64, Int64})
+        @test isa(District.weekcycle(ts), Vector{Int64})
+        ts = TimeSpan(1, 30)
+        @test isa(District.weekcycle(ts), Vector{Int64})
     end
 end
 
