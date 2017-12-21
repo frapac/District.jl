@@ -39,6 +39,8 @@ nnoise(d::Demands) = 2
 ################################################################################
 immutable PVProduction <: AbstractUncertainty end
 
+#TODO: implement PV prod
+
 function loadnoise(::PVProduction, ts::AbstractTimeSpan) end
 elecload(p::PVProduction, windex) = :(-w[$windex])
 nnoise(p::PVProduction) = 1
