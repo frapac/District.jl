@@ -25,9 +25,8 @@ function Battery(name::String)
 end
 
 
-# TODO: add alpha_b
 function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
-    dyn = [:(x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
+    dyn = [:($(bat.αc) * x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
     return dyn
 end
 
@@ -45,19 +44,22 @@ struct HotWaterTank <: AbstractDevice
     αt::Float64
     ηi::Float64
     ηe::Float64
+    hmax::Float64
+    power::Float64
 end
 function HotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
     #TODO: clean output's yield
-    HotWaterTank(name, data["ALPHA_H"], data["eta"], 1)
+    HotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
+                 data["hmax"], data["power"])
 end
 
 
 # TODO: consistency with demands
 function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
-    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - w[2]))]
+    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(hwt.ηe)*w[2]))]
     return dyn
 end
 
@@ -66,8 +68,8 @@ elecload(hwt::HotWaterTank, uindex) = :(u[$uindex])
 nstates(hwt::HotWaterTank) = 1
 ncontrols(hwt::HotWaterTank) = 1
 #TODO: dry bounds
-xbounds(hwt::HotWaterTank) = [(0., 12.)]
-ubounds(hwt::HotWaterTank) = [(0., 20.)]
+xbounds(hwt::HotWaterTank) = [(0., hwt.hmax)]
+ubounds(hwt::HotWaterTank) = [(0., hwt.power)]
 
 
 ################################################################################
@@ -97,6 +99,7 @@ struct R6C2 <: AbstractDevice
     albedo::Float64
     esp::Float64
     λe::Float64
+    heater::Float64
 end
 function R6C2(name)
     path = "$WD/data/devices/house/$name.json"
@@ -148,10 +151,11 @@ function R6C2(name)
     albedo = params["albedo"]
     esp = params["esp"]
     le = params["lambdae"]
+    heater = params["heater"]
     R6C2(name, altitude, latitude,
          Ssol, Surf_window, Surf_wall, H,
          Ci, Cw, Giw, Gie, Gwe, Ri, Rs, Rw, Re,
-         Fv, fframe, albedo, esp, le)
+         Fv, fframe, albedo, esp, le, heater)
 end
 
 
@@ -175,8 +179,7 @@ elecload(thm::R6C2, uindex) = :(u[$uindex])
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 1
 xbounds(thm::R6C2) = [(-50., 100.), (-50., 100.)]
-#TODO: dry heater
-ubounds(thm::R6C2) = [(0., 6.)]
+ubounds(thm::R6C2) = [(0., thm.heater)]
 
 
 ################################################################################

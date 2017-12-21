@@ -1,5 +1,8 @@
 {
     "ALPHA_H":0.9994,
     "BETA_H": 1.0,
-    "eta": 0.7
+    "etain": 0.7,
+    "etaout": 1,
+    "power": 20,
+    "hmax": 12
 }
