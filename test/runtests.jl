@@ -61,10 +61,15 @@ end
 
 
 @testset "Devices" begin
-    for (Stock, ids) in zip([Battery, HotWaterTank, CHP, R6C2],
-                            ["bat0", "ehwt0", "chp0", "rt1988"])
+    for (Stock, ids) in zip([Battery, HotWaterTank, R6C2, R6C2],
+                            ["bat0", "ehwt0", "rt1988", "rt2012"])
         st = Stock(ids)
         @test isa(st, Stock)
+        @test isa(District.elecload(st, 1), Expr)
+        @test isa(District.xbounds(st), Vector{Tuple{Float64, Float64}})
+        @test isa(District.ubounds(st), Vector{Tuple{Float64, Float64}})
+        @test length(District.xbounds(st)) == District.nstates(st)
+        @test length(District.ubounds(st)) == District.ncontrols(st)
     end
 end
 
@@ -79,6 +84,4 @@ end
         @test isa(tab, Array{Float64})
         @test length(tab) == 96
     end
-
-
 end

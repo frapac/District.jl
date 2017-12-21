@@ -5,6 +5,13 @@ export Battery, HotWaterTank, CHP, R6C2
 
 abstract type AbstractDevice end
 
+function elecload end
+function parsedevice end
+function nstates end
+function ncontrols end
+function xbounds end
+function ubounds end
+
 ################################################################################
 # Battery
 struct Battery <: AbstractDevice
