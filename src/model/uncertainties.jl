@@ -13,9 +13,10 @@ function loadnoise end
 ################################################################################
 immutable Demands <: AbstractUncertainty end
 
-function loadnoise(::Demands, ts::AbstractTimeSpan, idh=1)
+loadnoise(d::Demands, ts::AbstractTimeSpan, idh=1) = _loadnoise(d, ts, idh, 1, 1000)
+
+function _loadnoise(::Demands, ts::AbstractTimeSpan, idh, nf, nt)
     # select optimization scenarios subset
-    nf, nt = 1, 1000
     ntime = ntimesteps(ts)
     wcycle = weekcycle(ts)
 
@@ -35,6 +36,11 @@ end
 elecload(d::Demands, windex) = :(w[$windex])
 nnoise(d::Demands) = 2
 
+function genscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int, idh=1)
+    @assert nscen <= 1000
+    return _loadnoise(d, ts, idh, 1001, 1000 + nscen)
+end
+
 
 ################################################################################
 immutable PVProduction <: AbstractUncertainty end
@@ -44,3 +50,17 @@ immutable PVProduction <: AbstractUncertainty end
 function loadnoise(::PVProduction, ts::AbstractTimeSpan) end
 elecload(p::PVProduction, windex) = :(-w[$windex])
 nnoise(p::PVProduction) = 1
+
+#TODO: adapt
+"""Generate scenarios for PV with real laws."""
+function _genperturbations(val, δ)
+    error("Deprecated")
+    ntime = length(val)
+    scen = zeros(ntime)
+
+    for ii in 1:ntime
+        ϵ = (ii-1)/(ntime-1)*δ*randn()
+        scen[ii] = val[ii]*(1 + ϵ)
+    end
+    scen
+end
