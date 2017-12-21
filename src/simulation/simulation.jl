@@ -1,5 +1,10 @@
-# TODO: create SimulationResults
-#
+# Run simulation on given model and scenarios
+
+struct SimulationResult
+    costs::Vector{Float64}
+    stocks::Array{Float64, 3}
+    controls::Array{Float64, 3}
+end
 
 struct Simulator
     ts::TimeSpan
@@ -13,7 +18,7 @@ struct Simulator
 end
 
 
-
+# TODO: move Monte Carlo in another function
 function simulate(simulator::Simulator, policy::Policy)
     model = simulator.model
 
@@ -52,5 +57,6 @@ function simulate(simulator::Simulator, policy::Policy)
     for k = 1:nsimu
         costs[k] += simulator.realfinalcost(stocks[end, k, :])
     end
-    return costs, stocks, controls
+
+    return SimulationResult(costs, stocks, controls)
 end

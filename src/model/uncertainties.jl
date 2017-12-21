@@ -1,6 +1,7 @@
 # Definition for random variables
 
 # TODO: add quantization bins in Uncertainty?
+# TODO: add id house in Demands
 
 export loadnoise, Demands
 
@@ -8,6 +9,9 @@ abstract type AbstractUncertainty end
 
 
 function loadnoise end
+function nnoise end
+function genscenarios end
+function genforecast end
 
 
 ################################################################################
@@ -37,8 +41,13 @@ elecload(d::Demands, windex) = :(w[$windex])
 nnoise(d::Demands) = 2
 
 function genscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int, idh=1)
-    @assert nscen <= 1000
+    @assert 1 <= nscen <= 1000
     return _loadnoise(d, ts, idh, 1001, 1000 + nscen)
+end
+
+function genforecast(d::Demands, ts::AbstractTimeSpan, idh=1)
+    scen = genscenarios(d, ts, 1000, idh)
+    return mean(scen, 2)
 end
 
 
