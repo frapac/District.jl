@@ -1,8 +1,5 @@
 # Definition for random variables
 
-# TODO: add quantization bins in Uncertainty?
-# TODO: add id house in Demands
-
 export loadnoise, Demands
 
 abstract type AbstractUncertainty end
@@ -15,11 +12,15 @@ function genforecast end
 
 
 ################################################################################
-immutable Demands <: AbstractUncertainty end
+immutable Demands <: AbstractUncertainty
+    nbins::Int
+    idhouse::Int
+end
 
-loadnoise(d::Demands, ts::AbstractTimeSpan, idh=1) = _loadnoise(d, ts, idh, 1, 1000)
+loadnoise(d::Demands, ts::AbstractTimeSpan) = _loadnoise(d, ts, 1, 1000)
 
-function _loadnoise(::Demands, ts::AbstractTimeSpan, idh, nf, nt)
+function _loadnoise(d::Demands, ts::AbstractTimeSpan, nf, nt)
+    idh = d.idhouse
     # select optimization scenarios subset
     ntime = ntimesteps(ts)
     wcycle = weekcycle(ts)
@@ -40,12 +41,12 @@ end
 elecload(d::Demands, windex) = :(w[$windex])
 nnoise(d::Demands) = 2
 
-function genscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int, idh=1)
+function genscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int)
     @assert 1 <= nscen <= 1000
     return _loadnoise(d, ts, idh, 1001, 1000 + nscen)
 end
 
-function genforecast(d::Demands, ts::AbstractTimeSpan, idh=1)
+function genforecast(d::Demands, ts::AbstractTimeSpan)
     scen = genscenarios(d, ts, 1000, idh)
     return mean(scen, 2)
 end

@@ -54,7 +54,7 @@ end
     ts = TimeSpan(0, 1)
 
     @testset "Demands" begin
-        demands = loadnoise(Demands(), ts)
+        demands = loadnoise(Demands(10, 1), ts)
         @test isa(demands, Array{Float64, 3})
     end
 end

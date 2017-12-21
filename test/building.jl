@@ -26,7 +26,7 @@ using District
 
     @test nstocks(house) == 4
 
-    wdem = Demands()
+    wdem = Demands(10, 1)
     add!(house, wdem)
 
     dynam = District.builddynamic(house)

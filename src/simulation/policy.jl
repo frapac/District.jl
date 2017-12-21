@@ -62,7 +62,8 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 end
 
 
-function (m::MPCPolicy)(x, ξ)
+function (p::MPCPolicy)(x, ξ)
+    m = p.problem
     u = m[:u]
     for i in 1:model.dimStates
         JuMP.setRHS(m.ext[:cons][i], x[i])

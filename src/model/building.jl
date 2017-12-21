@@ -162,7 +162,7 @@ function buildlaws(house::House, nbins)
     laws = WhiteNoise[]
     for ξ in house.noises
         demands = loadnoise(ξ, house.time)
-        push!(laws, WhiteNoise(demands, nbins, KMeans()))
+        push!(laws, WhiteNoise(demands, ξ.nbins, KMeans()))
     end
 
     return Scenarios.prodprocess(laws)
