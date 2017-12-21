@@ -2,6 +2,14 @@
 # MPC POLICY
 ################################################################################
 
+abstract type AbstractMPCPolicy end
+
+struct MPCPolicy <: AbstractMPCPolicy
+    problem
+    solver
+    forecast
+end
+
 # TODO: clean
 function build_oracle(forecast)
     function oracle(t)
@@ -11,21 +19,9 @@ function build_oracle(forecast)
 end
 
 
-"""Solve linear problem at each iteration of MPC.
-
-# Arguments
-* `mpc::MPC`
-* `t::Int`
-    Current time
-* `oracle`
-    Forecast to consider
-* `x0`
-    State of the system at time `t`
-* `Tf::Int`
-    Final time
-"""
+"""Solve linear problem at each iteration of MPC.  """
 function buildproblem!(mpc::MPCPolicy, model, t::Int)
-    oracle = mpc.oracle
+    oracle = build_oracle(mpc.forecast)
     ntime = ntimesteps(mpc)
     nx = model.dimStates
     nu = model.dimControls
@@ -66,33 +62,23 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 end
 
 
-function mpccontrol(model, m, x0)
+function (m::MPCPolicy)(x, ξ)
     u = m[:u]
     for i in 1:model.dimStates
-        JuMP.setRHS(m.ext[:cons][i], x0[i])
+        JuMP.setRHS(m.ext[:cons][i], x[i])
+    end
+    for i in 1:model.dimNoises
+        JuMP.setRHS(m.ext[:noise][i], ξ[i])
     end
     st = solve(m)
-    if st == :Optimal
-        return collect(getvalue(u)[:, 1])
-    else
-        return zeros(model.dimControls)
-    end
+    # return first control
+    return collect(getvalue(u)[:, 1])
 end
 
-
-function mpccontrol(model, m, x0, w0)
-    for i in 1:model.dimNoises
-        JuMP.setRHS(m.ext[:noise][i], w0[i])
-    end
-    try
-        return mpccontrol(model, m, x0)
-    catch
-        println( w0)
-    end
-end
 
 """Update forecast of MPC directly in JuMP Model."""
 function updatemodel!(m, forecast, nscen)
+    error("Deprecated")
     w = getvariable(m, :w)
     ntimes = size(w, 1)
 
