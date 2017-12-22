@@ -8,9 +8,9 @@ function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty
 
     iw = 1
     for ξ in noises
-        nw = nnoise(ξ)
+        nw = nnoise(ξ) - 1
         assessment[:, :, iw:iw+nw] = genscenarios(ξ, ts, nscen)
-        iw += nw
+        iw += nw + 1
     end
     return assessment
 end
@@ -34,9 +34,9 @@ function genforecast(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty})
 
     iw = 1
     for ξ in noises
-        nw = nnoise(ξ)
+        nw = nnoise(ξ) - 1
         forecast[:, iw:iw+nw] = genforecast(ξ, ts)
-        iw += nw
+        iw += nw + 1
     end
     return forecast
 end

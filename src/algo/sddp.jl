@@ -3,9 +3,11 @@ export SDDP
 
 abstract type AbstractSolver end
 
+# TODO: improve description of SDDP
 immutable SDDP
     nit::Int
 end
+
 # SOLVER
 function solve(node::AbstractNode, sddp::SDDP)
     params = District.get_sddp_solver()

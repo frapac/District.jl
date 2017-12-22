@@ -138,4 +138,3 @@ function normal_quantization(n, mu, sigma)
     quantization[:, 2] = mu + sigma*quantization[:, 2]
     return quantization
 end
-

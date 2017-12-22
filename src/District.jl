@@ -7,7 +7,7 @@ module District
 using JLD
 using JuMP
 using Scenarios, StochDynamicProgramming
-using JSON
+using JSON, ProgressMeter
 
 WD = pwd()
 
@@ -29,8 +29,13 @@ include("model/irradiation.jl")
 # Buildings definition
 include("model/building.jl")
 
-
 # ALGO
 include("algo/solvers.jl")
 include("algo/sddp.jl")
+
+# SIMULATION
+include("simulation/policy.jl")
+include("simulation/scenarios.jl")
+include("simulation/simulation.jl")
+
 end

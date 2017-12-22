@@ -1,5 +1,7 @@
 # Run simulation on given model and scenarios
 
+export Simulator, SimulationResult
+
 struct SimulationResult
     costs::Vector{Float64}
     stocks::Array{Float64, 3}
@@ -11,15 +13,23 @@ struct Simulator
     # SP Model to simulate
     model::StochDynamicProgramming.SPModel
     # number of assessment scenarios
-    scenarios
+    scenarios::Array{Float64, 3}
     realdynamic::Function
     realcost::Function
     realfinalcost::Function
 end
+function Simulator(n::AbstractNode, nassess::Int)
+    ts = n.time
+    scen = genassessments(ts, n.noises, nassess)
+    return Simulator(ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
+end
+
+
 
 
 # TODO: move Monte Carlo in another function
-function simulate(simulator::Simulator, policy::Policy)
+function simulate(simulator::Simulator, policy::AbstractPolicy)
+    scenario = simulator.scenarios
     model = simulator.model
 
     # Get number of timesteps:
@@ -32,8 +42,8 @@ function simulate(simulator::Simulator, policy::Policy)
     costs    = zeros(nsimu)
 
     # Set first value of stocks equal to x0:
-    for i in 1:nb_simulations
-        stocks[1, i, :] = simulator.x0
+    for i in 1:nsimu
+        stocks[1, i, :] = simulator.model.initialState
     end
 
     @showprogress for t=1:ntime-1

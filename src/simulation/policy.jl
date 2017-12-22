@@ -1,14 +1,24 @@
+
+export MPCPolicy
+
+abstract type AbstractPolicy end
 ################################################################################
 # MPC POLICY
 ################################################################################
 
-abstract type AbstractMPCPolicy end
+abstract type AbstractMPCPolicy <: AbstractPolicy end
 
-struct MPCPolicy <: AbstractMPCPolicy
+mutable struct MPCPolicy <: AbstractMPCPolicy
     problem
     solver
     forecast
+    horizon
+    final
 end
+MPCPolicy(forecast) = MPCPolicy(Model(), get_solver(), forecast, -1, size(forecast, 1))
+
+# remaning time
+ntimesteps(mpc::MPCPolicy, t) = mpc.final - t + 1
 
 # TODO: clean
 function build_oracle(forecast)
@@ -22,7 +32,7 @@ end
 """Solve linear problem at each iteration of MPC.  """
 function buildproblem!(mpc::MPCPolicy, model, t::Int)
     oracle = build_oracle(mpc.forecast)
-    ntime = ntimesteps(mpc)
+    ntime = ntimesteps(mpc, t)
     nx = model.dimStates
     nu = model.dimControls
 
@@ -65,13 +75,13 @@ end
 function (p::MPCPolicy)(x, ξ)
     m = p.problem
     u = m[:u]
-    for i in 1:model.dimStates
+    for i in 1:endof(x)
         JuMP.setRHS(m.ext[:cons][i], x[i])
     end
-    for i in 1:model.dimNoises
+    for i in 1:endof(ξ)
         JuMP.setRHS(m.ext[:noise][i], ξ[i])
     end
-    st = solve(m)
+    st = JuMP.solve(m)
     # return first control
     return collect(getvalue(u)[:, 1])
 end
@@ -95,17 +105,19 @@ end
 ################################################################################
 abstract type AbstractDPPolicy end
 
-struct HereAndNowDP <: AbstractDPPolicy
+mutable struct HereAndNowDP <: AbstractDPPolicy
     problem::JuMP.Model
     V
     solver
 end
-struct WaitAndSeeDP <: AbstractDPPolicy
+HereAndNowDP(V) = HereAndNowDP(Model(), V, get_solver())
+mutable struct WaitAndSeeDP <: AbstractDPPolicy
     problem::JuMP.Model
     V
     solver
     laws
 end
+WaitAndSeeDP(V, laws) = WaitAndSeeDP(Model(), V, get_solver(), laws)
 
 
 function buildproblem!(policy::HereAndNowDP, model, t::Int)
@@ -126,12 +138,7 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
 
     @constraint(m, xf .== model.dynamics(t, x, u, w))
 
-    if isa(model.costFunctions, Function)
-    try
-        @objective(m, Min, model.costFunctions(t, x, u, w) + alpha)
-    catch
-        @objective(m, Min, model.costFunctions(m, t, x, u, w) + alpha)
-    end
+    @objective(m, Min, model.costFunctions(t, x, u, w) + alpha)
 
     for nc in 1:policy.V[t+1].numCuts
         lambda = vec(V[t+1].lambdas[nc, :])

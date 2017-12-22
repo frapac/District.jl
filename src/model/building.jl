@@ -234,7 +234,7 @@ end
 # SIMULATION DEFINITION
 ################################################################################
 """Get real cost for simulation."""
-function get_real_cost(day)
+function getrealcost(house::House)
 
     pel = loadprice(EDFPrice(), house.time)
     Tcons = loadsetpoint(NightSetPoint(), house.time)
