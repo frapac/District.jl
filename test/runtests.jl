@@ -3,7 +3,7 @@ push!(LOAD_PATH, "..")
 
 using Base.Test
 
-using District
+using District, Scenarios
 
 
 @testset "Data" begin
@@ -44,7 +44,7 @@ end
         for serie in [GTI, BHI, DHI, OutdoorTemperature]
             wt = loadweather(serie(), ts)
             @test isa(wt, Array{Float64})
-            @test length(wt) == 96
+            @test length(wt) == District.ntimesteps(ts)
         end
     end
 end
@@ -60,6 +60,27 @@ end
         ts2 = TimeSpan(90, 6)
         demands = loadnoise(Demands(10, 1), ts2)
         @test isa(demands, Array{Float64, 3})
+    end
+
+    @testset "Fit & Forecast" begin
+        for ξ in [Demands(10, 1), PVProduction(4, .15, 2, 0)]
+            @test isa(District.elecload(ξ, 1), Expr)
+            @test isa(District.nnoise(ξ), Int)
+
+            # test fiting
+            @test isa(District.fit(ξ, ts), WhiteNoise)
+
+            # test generation of scenarios
+            nscen = 10
+            scen = District.genscenarios(ξ, ts, nscen)
+            @test isa(scen, Array{Float64, 3})
+            @test size(scen) == (District.ntimesteps(ts), nscen, District.nnoise(ξ))
+
+            # test generation of forecast
+            forecast = District.genforecast(ξ, ts)
+            @test isa(forecast, Array{Float64, 2})
+            @test size(forecast) == (District.ntimesteps(ts), District.nnoise(ξ))
+        end
     end
 end
 

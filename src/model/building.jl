@@ -161,10 +161,10 @@ function buildlaws(house::House)
 
     laws = WhiteNoise[]
     for ξ in house.noises
-        demands = loadnoise(ξ, house.time)
-        push!(laws, WhiteNoise(demands, ξ.nbins, KMeans()))
+        push!(laws, fit(ξ, house.time))
     end
 
+    # return product of laws
     return Scenarios.prodprocess(laws)
 end
 
@@ -235,14 +235,18 @@ end
 ################################################################################
 """Get real cost for simulation."""
 function get_real_cost(day)
-    priceElec, Tcons = get_reference()
+
+    pel = loadprice(EDFPrice(), house.time)
+    Tcons = loadsetpoint(NightSetPoint(), house.time)
+    pin = loadprice(EDFInjection(), house.time)
+    pth = loadprice(Comfort(), house.time)
 
     function real_cost(t, x, u, w)
-        flow  = (w[1] + u[4]- w[5] - u[2] + u[1] + u[3])
-        pelec = priceElec[t]*max(0, flow)
+        flow  = elecload(t, x, u, w)
+        pelec = pel[t]*max(0, flow)
 
         temp  = -x[4] + Tcons[t] - 1
-        pconfort = Params.P_TH * max(0, temp)
+        pconfort = pth * max(0, temp)
 
         return pelec + pconfort
     end
