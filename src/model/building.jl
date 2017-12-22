@@ -28,13 +28,13 @@ add!(h::House, p::AbstractPrice) = push!(h.prices, p)
 nstocks(h::House) = sum(nstates.(h.devices))
 
 
-function build!(house, nbins, x0)
+function build!(house::House, x0::Vector{Float64})
     ntime = ntimesteps(house.time)
     xb = xbounds(house)
     ub = ubounds(house)
 
 
-    laws = buildlaws(house, nbins)
+    laws = buildlaws(house)
     costm = objective(house)
     fcost = final_cost
 
@@ -157,7 +157,7 @@ end
 ################################################################################
 # LAWS DEFINITION
 ################################################################################
-function buildlaws(house::House, nbins)
+function buildlaws(house::House)
 
     laws = WhiteNoise[]
     for ξ in house.noises

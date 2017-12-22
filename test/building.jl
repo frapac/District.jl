@@ -39,7 +39,10 @@ using District
     District.ubounds(house)
 
     bcost = District.objective(house)
+    @test isa(bcost, Function)
 
+    # add initial pos
     x0 = [.55, 6., 16., 16.]
-    District.build!(house, 10, x0)
+    District.build!(house, x0)
+    @test isa(house.model, District.LinearSPModel)
 end
