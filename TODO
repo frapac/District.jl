@@ -1,0 +1,13 @@
+
+# Devices
+- add capacity of tank in liters
+- add consistency between devices (plug&play)
+
+# Buildings
+- check initial state
+- clean definition of real cost
+- clean definition of prices
+- clean definition of final cost
+
+# Simulation
+- make simulation work
