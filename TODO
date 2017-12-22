@@ -9,5 +9,8 @@
 - clean definition of prices
 - clean definition of final cost
 
+# Uncertainties
+- PV for nbins=1
+
 # Simulation
 - make simulation work

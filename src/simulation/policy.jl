@@ -103,8 +103,9 @@ end
 ################################################################################
 # SDDP POLICY
 ################################################################################
-abstract type AbstractDPPolicy end
+abstract type AbstractDPPolicy <: AbstractPolicy end
 
+ntime(p::AbstractDPPolicy) = length(p.V)
 mutable struct HereAndNowDP <: AbstractDPPolicy
     problem::JuMP.Model
     V
@@ -138,11 +139,16 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
 
     @constraint(m, xf .== model.dynamics(t, x, u, w))
 
-    @objective(m, Min, model.costFunctions(t, x, u, w) + alpha)
+    @objective(m, Min, model.costFunctions(m, t, x, u, w) + alpha)
 
     for nc in 1:policy.V[t+1].numCuts
-        lambda = vec(V[t+1].lambdas[nc, :])
-        @constraint(m, V[t+1].betas[nc] + dot(lambda, xf) <= alpha)
+        lambda = vec(policy.V[t+1].lambdas[nc, :])
+        @constraint(m, policy.V[t+1].betas[nc] + dot(lambda, xf) <= alpha)
+    end
+
+    # Add final cost
+    if t == ntime(policy) - 1
+        model.finalCost(model, m)
     end
     # TODO: fix final costs in definition of costs
     policy.problem = m
@@ -178,10 +184,10 @@ function buildproblem!(policy::WaitAndSeeDP, model, t)
                sum(πp[j]*(model.costFunctions(m, t, x, u, ξ[:, j]) +
                     alpha[j]) for j in 1:ns))
 
-    for nc in 1:V[t+1].numCuts
-        lambda = vec(V[t+1].lambdas[nc, :])
+    for nc in 1:policy.V[t+1].numCuts
+        lambda = vec(policy.V[t+1].lambdas[nc, :])
         for j=1:ns
-            @constraint(m, V[t+1].betas[nc] + dot(lambda, xf[:, j]) <= alpha[j])
+            @constraint(m, policy.V[t+1].betas[nc] + dot(lambda, xf[:, j]) <= alpha[j])
         end
     end
 
@@ -203,7 +209,7 @@ function (p::HereAndNowDP)(x, ξ)
         JuMP.setRHS(m.ext[:cons][i], x[i])
     end
 
-    status = solve(m, suppress_warnings=false)
+    status = JuMP.solve(m, suppress_warnings=false)
     return getvalue(u)
 end
 
@@ -217,6 +223,6 @@ function (p::WaitAndSeeDP)(x, ξ)
         JuMP.setRHS(m.ext[:cons][i], x[i])
     end
 
-    status = solve(m, suppress_warnings=false)
+    status = JuMP.solve(m, suppress_warnings=false)
     return getvalue(u)
 end

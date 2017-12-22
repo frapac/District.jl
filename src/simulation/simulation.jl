@@ -2,12 +2,17 @@
 
 export Simulator, SimulationResult
 
+
+################################################################################
+# Simulation results
 struct SimulationResult
     costs::Vector{Float64}
     stocks::Array{Float64, 3}
     controls::Array{Float64, 3}
 end
 
+################################################################################
+# Simulator
 struct Simulator
     ts::TimeSpan
     # SP Model to simulate
@@ -27,6 +32,7 @@ end
 
 
 
+################################################################################
 # TODO: move Monte Carlo in another function
 function simulate(simulator::Simulator, policy::AbstractPolicy)
     scenario = simulator.scenarios
