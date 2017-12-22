@@ -1,7 +1,7 @@
 # Definition of generic devices
 
 # TODO: add check consistency
-export Battery, HotWaterTank, CHP, R6C2
+export Battery, HotWaterTank, MicroCHP, R6C2
 
 abstract type AbstractDevice end
 
@@ -58,7 +58,6 @@ function HotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
-    #TODO: clean output's yield
     HotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
                  data["hmax"], data["power"])
 end
@@ -192,20 +191,33 @@ ubounds(thm::R6C2) = [(0., thm.heater)]
 ################################################################################
 # CHP model
 # TODO: implement CHP
-struct CHP <: AbstractDevice
-    name
-    power
-    yield
-    eta_elec
-    power_elec
-    power_therm
+struct MicroCHP <: AbstractDevice
+    name::String
+    power::Float64
+    yield::Float64
+    eta_elec::Float64
+    power_elec::Float64
+    power_therm::Float64
+    hwt::HotWaterTank
 end
-function CHP(name)
+function MicroCHP(name)
     path = "$WD/data/devices/chp/$name.json"
     data = JSON.parsefile(path)
     power = data["CHP_POWER"]
     yield = data["CHP_YIELD"]
     eta = data["SHARE_ELEC"]
+    hwt = HotWaterTank(data["watertank"])
 
-    CHP(name, power, yield, eta, power*yield*eta, power*yield*(1-eta))
+    MicroCHP(name, power, yield, eta, power*yield*eta, power*yield*(1-eta), hwt)
 end
+
+function parsedevice(chp::MicroCHP, xindex, uindex, dt, p::Dict=Dict())
+    dyn = [:($(chp.hwt.αt)*x[$xindex] + $dt*($(chp.hwt.ηi)*$(chp.power_therm)*u[$uindex] - $(chp.hwt.ηe)*(u[4]+w[2])))]
+    return dyn
+end
+
+elecload(chp::MicroCHP, uindex) = :(-u[$uindex]*$(chp.power_elec))
+nstates(chp::MicroCHP) = 1
+ncontrols(chp::MicroCHP) = 1
+xbounds(chp::MicroCHP) = xbounds(chp.hwt)
+ubounds(chp::MicroCHP) = [(0., 1.)]

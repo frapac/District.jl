@@ -56,13 +56,17 @@ end
     @testset "Demands" begin
         demands = loadnoise(Demands(10, 1), ts)
         @test isa(demands, Array{Float64, 3})
+        # test other timespan
+        ts2 = TimeSpan(90, 6)
+        demands = loadnoise(Demands(10, 1), ts2)
+        @test isa(demands, Array{Float64, 3})
     end
 end
 
 
 @testset "Devices" begin
-    for (Stock, ids) in zip([Battery, HotWaterTank, R6C2, R6C2],
-                            ["bat0", "ehwt0", "rt1988", "rt2012"])
+    for (Stock, ids) in zip([Battery, HotWaterTank, R6C2, R6C2, MicroCHP],
+                            ["bat0", "ehwt0", "rt1988", "rt2012", "chp0"])
         st = Stock(ids)
         @test isa(st, Stock)
         @test isa(District.elecload(st, 1), Expr)

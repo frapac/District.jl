@@ -1,5 +1,6 @@
 {
     "CHP_POWER": 7,
     "CHP_YIELD": 0.93,
-    "SHARE_ELEC": 0.13
+    "SHARE_ELEC": 0.13,
+    "watertank": "ehwt0"
 }
