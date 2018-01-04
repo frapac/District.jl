@@ -4,9 +4,10 @@
 # Electrical networks utilities.
 ################################################################################
 # @TODO/ define properly graph of network (random)
+abstract type AbstractNetwork end
 
 
-struct Network
+struct Network <: AbstractNetwork
     # number of timesteps
     ntime::Int
     # incidence matrix
@@ -16,7 +17,7 @@ struct Network
     # maxflow through arcs
     maxflow::Vector{Float64}
 end
-function Network(ntime, connex)
+function Network(ntime::Int, connex)
     # get number of nodes
     nnodes = size(connex, 1)
     # get number of arcs

@@ -33,6 +33,8 @@ include("model/devices.jl")
 include("model/irradiation.jl")
 # Buildings definition
 include("model/building.jl")
+# Network definition
+include("model/network.jl")
 
 ##########
 # ALGO

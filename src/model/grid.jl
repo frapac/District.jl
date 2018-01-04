@@ -1,6 +1,6 @@
 
 
-type Grid
+struct Grid
     ntime::Int
     # global problem
     model::SPModel
