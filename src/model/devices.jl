@@ -70,7 +70,7 @@ function Battery(name::String)
 end
 
 
-function parsedevice(bat::Battery, xindex, uindex, dt, p::Dict=Dict())
+function parsedevice(bat::Battery, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dyn = [:($(bat.αc) * x[$xindex] + $dt*($(bat.ρi) * u[$uindex] - 1. / $(bat.ρe) * u[$(uindex+1)]))]
     return dyn
 end
@@ -102,12 +102,12 @@ end
 
 
 # TODO: consistency with demands
-function parsedevice(hwt::HotWaterTank, xindex, uindex, dt, p::Dict=Dict())
+function parsedevice(hwt::HotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(hwt.ηe)*w[2]))]
     return dyn
 end
 
-elecload(hwt::HotWaterTank, uindex) = :(u[$uindex])
+elecload(hwt::HotWaterTank, uindex::Int) = :(u[$uindex])
 
 nstates(hwt::HotWaterTank) = 1
 ncontrols(hwt::HotWaterTank) = 1
@@ -203,7 +203,7 @@ function R6C2(name)
 end
 
 
-function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
+function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dt2 = dt * 3600
     dyn = [:(
         x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
@@ -219,7 +219,7 @@ function parsedevice(thm::R6C2, xindex, uindex, dt, p::Dict=Dict())
     return dyn
 end
 
-elecload(thm::R6C2, uindex) = :(u[$uindex])
+elecload(thm::R6C2, uindex::Int) = :(u[$uindex])
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 1
 xbounds(thm::R6C2) = [(-50., 100.), (-50., 100.)]
@@ -249,12 +249,12 @@ function MicroCHP(name)
     MicroCHP(name, power, yield, eta, power*yield*eta, power*yield*(1-eta), hwt)
 end
 
-function parsedevice(chp::MicroCHP, xindex, uindex, dt, p::Dict=Dict())
+function parsedevice(chp::MicroCHP, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dyn = [:($(chp.hwt.αt)*x[$xindex] + $dt*($(chp.hwt.ηi)*$(chp.power_therm)*u[$uindex] - $(chp.hwt.ηe)*(u[4]+w[2])))]
     return dyn
 end
 
-elecload(chp::MicroCHP, uindex) = :(-u[$uindex]*$(chp.power_elec))
+elecload(chp::MicroCHP, uindex::Int) = :(-u[$uindex]*$(chp.power_elec))
 nstates(chp::MicroCHP) = 1
 ncontrols(chp::MicroCHP) = 1
 xbounds(chp::MicroCHP) = xbounds(chp.hwt)

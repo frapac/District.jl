@@ -1,3 +1,10 @@
+################################################################################
+# District.jl
+################################################################################
+# Implement SDDP solver.
+# - Currently, SDDP solver used StochDynamicProgramming.
+################################################################################
+# TODO: work in progress to interface efficiently StochDynamicProgramming
 
 export SDDP
 

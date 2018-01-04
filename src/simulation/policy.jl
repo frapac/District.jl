@@ -1,23 +1,43 @@
+################################################################################
+# District.jl
+################################################################################
+# Implement policies to take online decisions in assessment.
+# - MPCPolicy finds decisions with MPC algorithm.
+# - DPPolicy finds decisions with a one-step lookahead problem.
+################################################################################
 
 export MPCPolicy
 
 abstract type AbstractPolicy end
+
+"""
+    buildproblem!(p::AbstractPolicy, model::SPModel, t::Int)
+
+Update JuMP.Model in `p.problem`, considering SPModel `model`
+and current timestep `t`.
+"""
+function buildproblem! end
+
 ################################################################################
 # MPC POLICY
 ################################################################################
-
 abstract type AbstractMPCPolicy <: AbstractPolicy end
 
 mutable struct MPCPolicy <: AbstractMPCPolicy
-    problem
+    # JuMP Model
+    problem::JuMP.Model
+    # Mathematical Programming solver
     solver
+    # MPC forecast
     forecast
+    # Horizon
     horizon
+    # Final time
     final
 end
 MPCPolicy(forecast) = MPCPolicy(Model(), get_solver(), forecast, -1, size(forecast, 1))
 
-# remaning time
+# remaining time
 ntimesteps(mpc::MPCPolicy, t) = mpc.final - t + 1
 
 # TODO: clean
@@ -29,7 +49,6 @@ function build_oracle(forecast)
 end
 
 
-"""Solve linear problem at each iteration of MPC.  """
 function buildproblem!(mpc::MPCPolicy, model, t::Int)
     oracle = build_oracle(mpc.forecast)
     ntime = ntimesteps(mpc, t)
@@ -38,9 +57,7 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 
     m = Model(solver=get_solver())
 
-    # take into account binary constraints in MPC:
     @variable(m,  model.ulim[i][1] <= u[i=1:nu, j=1:ntime-1] <=  model.ulim[i][2])
-    # Define constraints other variables:
     @variable(m,  model.xlim[i][1] <= x[i=1:nx, j=1:ntime] <= model.xlim[i][2])
 
     # TODO: clean final step
@@ -72,15 +89,19 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 end
 
 
+# Take a decision with MPC
 function (p::MPCPolicy)(x, ξ)
     m = p.problem
     u = m[:u]
+    # update current state in MPC problem
     for i in 1:endof(x)
         JuMP.setRHS(m.ext[:cons][i], x[i])
     end
+    # update current noise in MPC problem
     for i in 1:endof(ξ)
         JuMP.setRHS(m.ext[:noise][i], ξ[i])
     end
+    # solve problem with LP solver
     st = JuMP.solve(m)
     # return first control
     return collect(getvalue(u)[:, 1])
@@ -106,16 +127,29 @@ end
 abstract type AbstractDPPolicy <: AbstractPolicy end
 
 ntime(p::AbstractDPPolicy) = length(p.V)
+
+# Here and Now DP policy
 mutable struct HereAndNowDP <: AbstractDPPolicy
+    # JuMP Model
     problem::JuMP.Model
+    # Value functions
     V
+    # LP solver
     solver
 end
 HereAndNowDP(V) = HereAndNowDP(Model(), V, get_solver())
+
+# Wait and See DP policy
+# WaitAndSeeDP does not anticipate the realization of ξ_t between t and t+1,
+# and thus take a decision wrt the law of ξ_t.
 mutable struct WaitAndSeeDP <: AbstractDPPolicy
+    # JuMP Model
     problem::JuMP.Model
+    # Value functions
     V
+    # LP solver
     solver
+    # Laws of uncertainties {w_t}_{t=0..T}
     laws
 end
 WaitAndSeeDP(V, laws) = WaitAndSeeDP(Model(), V, get_solver(), laws)
@@ -155,7 +189,7 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
 end
 
 
-function buildproblem!(policy::WaitAndSeeDP, model, t)
+function buildproblem!(policy::WaitAndSeeDP, model, t::Int)
     m = Model(solver=policy.solver)
     law = policy.laws
 
@@ -214,6 +248,7 @@ function (p::HereAndNowDP)(x, ξ)
 end
 
 
+# WaitAndSeeDP does not use the realization ξ to compute a decision
 function (p::WaitAndSeeDP)(x, ξ)
     m = p.problem
     u = m[:u]

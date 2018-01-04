@@ -1,14 +1,20 @@
+################################################################################
+# District.jl
+################################################################################
+# Optimization solvers for Optimal Control.
+# - Change here the LP solvers if you do not have Gurobi installed.
+################################################################################
+# TODO: clean SDDP solver
 
 # Specify your solver:
 using Gurobi
 #= using Clp =#
 
-"""Get solver."""
-function get_solver()
-    return Gurobi.GurobiSolver(OutputFlag=false, MIPGap=.01)
-end
+"Get LP solver."
+get_solver() = Gurobi.GurobiSolver(OutputFlag=false, MIPGap=.01)
 
 
+"Get StochDynamicProgramming SDDP solver."
 function get_sddp_solver()
     solver = get_solver()
 

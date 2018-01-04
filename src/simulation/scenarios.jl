@@ -1,4 +1,13 @@
-# Generate scenarios and forecasts for assessments
+################################################################################
+# District.jl
+################################################################################
+# Generate scenarios and forecasts for assessments.
+################################################################################
+
+
+################################################################################
+# ASSESSMENT SCENARIOS
+################################################################################
 
 function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int)
     # get noises dimensions
@@ -14,7 +23,6 @@ function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty
     end
     return assessment
 end
-
 
 
 """Simulate in-sample scenarios."""

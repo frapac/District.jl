@@ -1,5 +1,10 @@
 ################################################################################
-# Compute solar irradiation
+# District.jl
+################################################################################
+# Compute solar irradiation.
+# - Currently, compute irradiation only for walls with fixed orientation.
+# - Irradiation is computed with Direct and Diffuse horizontal irradiation
+#   (BHI and DHI), with the Perez model.
 ################################################################################
 
 #TODO: rename get_irradiation

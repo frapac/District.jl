@@ -1,4 +1,10 @@
-# Run simulation on given model and scenarios
+################################################################################
+# District.jl
+################################################################################
+# Implement Monte-Carlo simulation.
+# - Simulator stores all information needed for simulation.
+# - Simulation returns a SimulationResult object.
+################################################################################
 
 export Simulator, SimulationResult
 import Base: show
@@ -20,15 +26,25 @@ end
 ################################################################################
 # Simulator
 struct Simulator
+    # time period considered
     ts::TimeSpan
     # SP Model to simulate
     model::StochDynamicProgramming.SPModel
-    # number of assessment scenarios
+    # assessment scenarios
     scenarios::Array{Float64, 3}
+    # simulation's dynamics
     realdynamic::Function
+    # simulations's costs
     realcost::Function
+    # simulation's final cost
     realfinalcost::Function
 end
+
+"""
+    Simulator(n::AbstractNode, nassess::Int)
+
+Build Simulator corresponding to Node `n` and to `nassess` scenarios.
+"""
 function Simulator(n::AbstractNode, nassess::Int)
     ts = n.time
     scen = genassessments(ts, n.noises, nassess)
@@ -40,11 +56,17 @@ end
 
 ################################################################################
 # TODO: move Monte Carlo in another function
+"""
+    simulate(sim::Simulator, policy::AbstractPolicy)
+
+Simulate strategies specified by `policy` on `sim` Simulator.
+Return a SimulationResult object.
+"""
 function simulate(simulator::Simulator, policy::AbstractPolicy)
     scenario = simulator.scenarios
     model = simulator.model
 
-    # Get number of timesteps:
+    # Get number of timesteps and number of simulations
     ntime = size(scenario, 1)
     nsimu = size(scenario, 2)
 
@@ -58,6 +80,7 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
         stocks[1, i, :] = simulator.model.initialState
     end
 
+    # simulate
     @showprogress for t=1:ntime-1
         # update problem inside policy
         buildproblem!(policy, simulator.model, t)
@@ -65,17 +88,21 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
         for k in 1:nsimu
             # get previous state:
             x = stocks[t, k, :]
+            # and current noise
             ξ = scenario[t, k, :]
 
-            # compute decisions:
+            # compute decisions with policy:
             u = policy(x, ξ)
+            # get future state with real dynamics
             xf = simulator.realdynamic(t, x, u, ξ)
 
+            # update
             costs[k] += simulator.realcost(t, x, u, ξ)
             stocks[t+1, k, :] = xf
             controls[t, k, :] = u
         end
     end
+    # compute final costs along scenarios
     for k = 1:nsimu
         costs[k] += simulator.realfinalcost(stocks[end, k, :])
     end

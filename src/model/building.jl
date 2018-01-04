@@ -1,21 +1,40 @@
+################################################################################
+# District.jl
+################################################################################
+# Generic models for  buildings.
+# - Buildings currently implemented:
+#    * House
+# - Buildings are designed to lay on grid's nodes.
+################################################################################
+# TODO: add generic methods for AbstractBuilding
 
 export House, add!
 export nstocks
 
-
+# GENERIC TYPESJ
 # Definition of node in graph
 abstract type AbstractNode end
 abstract type AbstractBuilding <: AbstractNode end
 
+
+################################################################################
+# HOUSE
 # TODO: penal tank hardcoded
 PENAL_TANK = 1.
 
+# TODO: add type for model. Shall we inherit from StochDynamicProgramming?
 mutable struct House <: AbstractBuilding
+    # name of House
     name::Symbol
+    # time period considered
     time::AbstractTimeSpan
+    # House's devices
     devices::Vector{AbstractDevice}
+    # House's uncertainties
     noises::Vector{AbstractUncertainty}
+    # House's prices
     prices::Vector{AbstractPrice}
+    # SP model
     model
 end
 
@@ -234,6 +253,7 @@ end
 ################################################################################
 # SIMULATION DEFINITION
 ################################################################################
+# TODO: clean definition of real cost
 """Get real cost for simulation."""
 function getrealcost(house::House)
 
