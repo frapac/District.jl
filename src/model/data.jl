@@ -1,13 +1,16 @@
-# Load deterministic data for District
-# Deterministic data encompasses:
-#   - prices (for electricity and comfort)
-#   - setpoints (for internal temperatures)
-#   - weather conditions (corresponding to year 2015)
-#
-# All timeseries are stored in a JLD database, stored in
+################################################################################
+# District.jl
+################################################################################
+# Load deterministic data for District.
+# - Deterministic data encompasses:
+#   * prices (for electricity and comfort)
+#   * setpoints (for internal temperatures)
+#   * weather conditions (corresponding to year 2015)
+# - All timeseries are stored in a JLD database, stored in
 #     data/weather.jld
-# Other tariffs and septpoints are stored in
+# - Other tariffs and septpoints are stored in
 #     data/tariffs
+################################################################################
 
 
 export loadprice, EDFPrice, EPEXPrice

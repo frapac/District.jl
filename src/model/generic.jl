@@ -1,5 +1,12 @@
-# Generic models
+################################################################################
+# District.jl
+################################################################################
+# Generic models for District.jl.
+# - TimeSpan is a proxy to load a specified time period.
+################################################################################
+
 # TODO: change files' name
+
 
 export TimeSpan
 

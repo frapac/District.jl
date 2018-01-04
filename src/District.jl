@@ -1,6 +1,10 @@
-# District optimization package
 # Copyright: Efficacity
 # Contact: francoispacaud8@gmail.com
+################################################################################
+# District.jl
+################################################################################
+# District optimization package
+################################################################################
 
 module District
 

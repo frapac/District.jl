@@ -1,15 +1,53 @@
-# Definition of generic devices
+################################################################################
+# District.jl
+################################################################################
+# Definition of generic devices.
+# - Current implemented devices:
+#       Battery, HotWaterTank, R6C2, MicroCHP
+# - All Expression consider the notation of Optimal Control:
+#    * `x` denotes the state
+#    * `u` denotes the controls
+#    * `w` denotes the uncertainties
+################################################################################
 
 # TODO: add check consistency
 export Battery, HotWaterTank, MicroCHP, R6C2
 
 abstract type AbstractDevice end
 
+"""
+    elecload(d::AbstractDevice, uindex::Int)
+
+Get impact of Device `d` on grid's load balance as an Expression.
+`uindex` specified the starting index of devices control in grid's
+dynamics.
+"""
 function elecload end
+
+"""
+    parsedevice(d::AbstractDevice, xindex::Int, uindex::Int, dt::Float64, p::Dict)
+
+Get dynamics of Device `d` as an Expression.
+
+# Arguments
+* `d::AbstractDevice`: device to parse.
+* `xindex::Int`: starting state index of device in grid.
+* `uindex::Int`: starting control index of device in grid.
+* `dt::Float64`: time delta of a timestep.
+* `p::Dict`: optional parameters.
+"""
 function parsedevice end
+
+"Get number of states in Device `d`."
 function nstates end
+
+"Get number of controls in Device `d`."
 function ncontrols end
+
+"Get states bounds for Device `d`."
 function xbounds end
+
+"Get controls bounds for Device `d`."
 function ubounds end
 
 ################################################################################

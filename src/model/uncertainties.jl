@@ -1,13 +1,14 @@
-# Generic definition of uncertainties
-# Uncertainties encompass:
-# - Demands
-# - PV Generation
-#
-# Demands scenarios are stored in a JLD database:
-#   data/db.jld
-#
-# Note for developers:
-# All uncertainties must inherit from AbstractUncertainty
+################################################################################
+# District.jl
+################################################################################
+# Generic definition of uncertainties.
+# - Uncertainties encompass:
+#   * Demands
+#   * PV Generation
+# - Demands scenarios are stored in a JLD database:
+#     data/db.jld
+# - All uncertainties must inherit from AbstractUncertainty
+################################################################################
 
 export loadnoise, Demands, PVProduction
 
