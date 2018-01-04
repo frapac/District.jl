@@ -1,3 +1,5 @@
+# Bugs:
+- in Summer, inner tempeature is above 40C ...
 
 # Devices
 - add capacity of tank in liters
@@ -11,14 +13,12 @@
 - clean definition of final cost
 
 # Uncertainties
-- PV for nbins=1: DONE
 
 # Simulation
 - implement DH policy: MPC and SDDP 
 - add prediction with AR
 
 # Documentation
-- Doc!
 
 # Decomposition
 - add working price decomposition

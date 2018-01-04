@@ -1,3 +1,8 @@
+################################################################################
+# District.jl
+################################################################################
+# Test District/models/buildings.jl
+################################################################################
 
 push!(LOAD_PATH, "..")
 
@@ -28,6 +33,8 @@ using District
 
     wdem = Demands(10, 1)
     add!(house, wdem)
+
+    @test nnoises(house) == 2
 
     dynam = District.builddynamic(house)
     @test isa(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)), Vector{Float64})

@@ -9,9 +9,9 @@
 # TODO: add generic methods for AbstractBuilding
 
 export House, add!
-export nstocks
+export nstocks, nnoises
 
-# GENERIC TYPESJ
+# GENERIC TYPES
 # Definition of node in graph
 abstract type AbstractNode end
 abstract type AbstractBuilding <: AbstractNode end
@@ -46,6 +46,7 @@ add!(h::House, p::AbstractPrice) = push!(h.prices, p)
 
 
 nstocks(h::House) = sum(nstates.(h.devices))
+nnoises(h::House) = sum(nnoise.(h.noises))
 
 
 function build!(house::House, x0::Vector{Float64})

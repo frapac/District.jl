@@ -10,3 +10,4 @@ using District, Scenarios
 
 include("models.jl")
 include("building.jl")
+include("simulation.jl")

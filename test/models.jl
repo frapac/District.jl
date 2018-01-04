@@ -4,6 +4,8 @@
 # Test District/models/
 ################################################################################
 
+push!(LOAD_PATH, "..")
+
 using Base.Test
 using District, Scenarios
 
