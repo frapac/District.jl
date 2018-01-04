@@ -1,8 +1,13 @@
-
 ################################################################################
-# Decomposition schemes
+# District.jl
 ################################################################################
-@compat abstract type Decomposition end
+# Decomposition schemes.
+# - Price decomposition
+# - Decomposition by quantity
+# - Decomposition by prediction
+# - ADMM
+################################################################################
+abstract type Decomposition end
 immutable PriceDecomposition <: Decomposition end
 immutable QuantDecomposition <: Decomposition end
 immutable ADMMDecomposition <: Decomposition end
@@ -10,7 +15,7 @@ immutable ADMMDecomposition <: Decomposition end
 
 
 # Define atom for Bellman's update and simulation
-@compat abstract type Atom end
+abstract type Atom end
 
 struct PriceAtom <: Atom
     λ::Array
@@ -30,7 +35,6 @@ end
 ################################################################################
 # PROBLEM'S UPDATE
 ################################################################################
-
 """Update `JuMP.Model` objective with new multiplier `λ`."""
 function updpb!(m::JuMP.Model, atom::PriceAtom, t, ny)
     λ = atom.λ[t, ny]

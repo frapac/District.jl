@@ -34,7 +34,7 @@ District.build!(house, x0)
 
 
 # Build simulator
-sim = Simulator(house, 100)
+sim = Simulator(house, 10)
 
 # Build policy
 if ALGO == "MPC"

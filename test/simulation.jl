@@ -36,7 +36,6 @@ function buildhouse()
 end
 
 
-
 @testset "Simulation" begin
     house = buildhouse()
     nscen = 10

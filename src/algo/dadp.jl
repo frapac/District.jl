@@ -1,40 +1,13 @@
 
 import Base: Base.show
 
-
-    name::Symbol
-    ntime::Int
-
-    solver::SPSolver
-
-    # multiplier
-    λ::Array{Float64, 2}
-    # value functions
-    V::Array{Float64, 2}
-    # optimal flow
-    flow::Array{Float64, 2}
-
-    # initial position
-    x0::Vector{Float64}
-
-    primalcost::Float64
-    dualcost::Float64
-
-    # size of information variable
-    ninfo::Int
-
+using Lbfgsb
 
 ################################################################################
 # Implementation of DADP algorithm
 ################################################################################
-
-
-# TODO: add proper import
-using Lbfgsb
-
-
-type DADPAlgo
-    N_ITER::Int
+struct DADP <: AbstractSolver
+    niter::Int
     algo::Optim.Optimizer
     approx::Symbol
     gtol::Float64
@@ -52,18 +25,16 @@ function optimize!(pb::Grid, dadp::DADPAlgo; verbose=false)
     x0 = init(pb.dec, pb, warmstart=dadp.warmstart)
 
     # build oracle
-    f, grad! = oracle(pb, dadp.nsimu)
+    f, grad! = oracle(pb, dadp)
 
     # Configure Gradient Descent
     options = Optim.Options(g_tol=dadp.gtol, allow_f_increases=true, show_trace=verbose,
-                        iterations=dadp.N_ITER, store_trace=true, extended_trace=true)
+                        iterations=dadp.niter, store_trace=true, extended_trace=true)
 
     # Launch Gradient Descent!
     try
-        if isa(pb.dec, PriceDecomposition)
-            #= return @time Optim.optimize(f, grad!, x0, dadp.algo, options) =#
-            return @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-8)
-        end
+        #= return @time Optim.optimize(f, grad!, x0, dadp.algo, options) =#
+        return @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-8)
     catch ex
         if isa(ex, InterruptException)
             warn("Gradient descent interrupted manually")
@@ -79,20 +50,14 @@ end
 # Define routine to use Gradient Descent.
 # We use a closure to avoid unecessary operation
 # while computing F after gradient G
-function oracle(pb::Grid, nsimu::Int)
-    function f(λ)
-        return cost(pb)
-    end
+function oracle(pb::Grid, dadp::DADP)
+    f(λ) = cost(pb)
 
     function grad!(λ, storage)
         # update multiplier
         mul = reshape(λ, pb.nnodes, pb.ntime-1, pb.ninfo)
 
-        isa(pb.dec, QuantDecomposition) && projection!(mul, pb)
         setexch!(pb, mul)
-
-        # if decomposition is primal, use projected gradient
-        isa(dec, QuantDecomposition) && proj!(pb, λ)
 
         # solve problem and update value functions
         solve!(pb)
@@ -231,4 +196,3 @@ function getprimal(pb, trace, nsimu)
     end
     primal
 end
-
