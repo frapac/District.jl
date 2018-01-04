@@ -12,8 +12,9 @@ struct SimulationResult
     controls::Array{Float64, 3}
 end
 
+# TODO: .25 hardcoded
 function show(io::IO, res::SimulationResult)
-    @printf("Costs: %.4f ± %.4f €\n", mean(res.costs), std(res.costs))
+    @printf("Costs: %.4f ± %.4f €\n", mean(.25res.costs), std(.25res.costs))
 end
 
 ################################################################################

@@ -7,6 +7,7 @@ export nstocks
 abstract type AbstractNode end
 abstract type AbstractBuilding <: AbstractNode end
 
+# TODO: penal tank hardcoded
 PENAL_TANK = 1.
 
 mutable struct House <: AbstractBuilding

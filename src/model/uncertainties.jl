@@ -1,18 +1,58 @@
-# Definition for random variables
+# Generic definition of uncertainties
+# Uncertainties encompass:
+# - Demands
+# - PV Generation
+#
+# Demands scenarios are stored in a JLD database:
+#   data/db.jld
+#
+# Note for developers:
+# All uncertainties must inherit from AbstractUncertainty
 
 export loadnoise, Demands, PVProduction
 
 abstract type AbstractUncertainty end
 
 
+"""
+    loadnoise(w::AbstractUncertainty, ts::AbstractTimeSpan)
+
+Load noise optimization scenarios during period specified in
+TimeSpan `ts`.
+"""
 function loadnoise end
+
+"Get dimension of AbstractUncertainty `w`."
 function nnoise end
+
+"""
+    genscenarios(w::AbstractUncertainty, ts::AbstractTimeSpan, nscen::Int)
+
+Generate `nscen` scenarios of AbstractUncertainty `w` during period
+specified in TimeSpan `ts`.
+Return data as `Array{Float64, 3}`.
+"""
 function genscenarios end
+
+"""
+    genforecast(w::AbstractUncertainty, ts::AbstractTimeSpan)
+
+Generate a forecast of AbstractUncertainty `w` during period
+specified in TimeSpan `ts`.  Return forecast as `Array{Float64, 2}`.
+"""
 function genforecast end
+
+"""
+    fit(w::AbstractUncertainty, ts::AbstractTimeSpan)
+
+Fit discrete `WhiteNoise` modeling AbstractUncertainty `w` during period
+specified in AbstractTimeSpan `ts`.
+"""
 function fit end
 
 
 ################################################################################
+# Demands Uncertainties
 immutable Demands <: AbstractUncertainty
     nbins::Int
     idhouse::Int
@@ -57,6 +97,7 @@ fit(d::Demands, ts) = WhiteNoise(loadnoise(d, ts), d.nbins, KMeans())
 
 
 ################################################################################
+# PV uncertainties
 immutable PVProduction <: AbstractUncertainty
     nbins::Int
     η::Float64

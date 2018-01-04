@@ -1,7 +1,8 @@
 
 # Devices
 - add capacity of tank in liters
-- add consistency between devices (plug&play)
+- add consistency between devices (plug&play): use Dict
+- add AC conditioner
 
 # Buildings
 - check initial state
@@ -10,7 +11,14 @@
 - clean definition of final cost
 
 # Uncertainties
-- PV for nbins=1
+- PV for nbins=1: DONE
 
 # Simulation
-- make simulation work
+- implement DH policy: MPC and SDDP 
+- add prediction with AR
+
+# Documentation
+- Doc!
+
+# Decomposition
+- add working price decomposition

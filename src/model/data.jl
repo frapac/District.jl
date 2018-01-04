@@ -1,4 +1,13 @@
-# Implement deterministic data
+# Load deterministic data for District
+# Deterministic data encompasses:
+#   - prices (for electricity and comfort)
+#   - setpoints (for internal temperatures)
+#   - weather conditions (corresponding to year 2015)
+#
+# All timeseries are stored in a JLD database, stored in
+#     data/weather.jld
+# Other tariffs and septpoints are stored in
+#     data/tariffs
 
 
 export loadprice, EDFPrice, EPEXPrice
@@ -12,7 +21,14 @@ abstract type AbstractData end
 abstract type AbstractPrice <: AbstractData end
 abstract type AbstractElecPrice <: AbstractPrice end
 
+"""
+    loadprice(p::AbstractPrice, ts::AbstractTimeSpan)
+
+Load price values during date specified in TimeSpan `ts`. Return
+price as `Vector{Float64}` with same size as `ts`.
+"""
 function loadprice end
+
 
 # Off/On Peak tariffs
 immutable EDFPrice <: AbstractElecPrice end
@@ -28,6 +44,9 @@ function loadprice(::EDFPrice, ts::AbstractTimeSpan)
 end
 
 
+# French EPEX price for day-ahead auction.
+# Coming from:
+# http://www.epexspot.com/en/
 immutable EPEXPrice <: AbstractElecPrice end
 loadprice(::EPEXPrice, ts::AbstractTimeSpan) = loaddata(ts, 16)
 
@@ -49,9 +68,16 @@ end
 # Definition of temperature setpoints
 abstract type AbstractSetPoint <: AbstractData end
 
+
+"""
+    loadsetpoint(p::AbstractSetPoint, ts::AbstractTimeSpan)
+
+Load setpoint values during date specified in TimeSpan `ts`. Return
+price as `Vector{Float64}` with same size as `ts`.
+"""
 function loadsetpoint end
 
-
+# Night/Day setpoints
 immutable NightSetPoint <: AbstractSetPoint end
 
 function loadsetpoint(::NightSetPoint, ts::AbstractTimeSpan)
@@ -70,6 +96,13 @@ end
 ################################################################################
 # Weather Data
 abstract type AbstractWeatherData <: AbstractData end
+
+"""
+    loadweather(p::AbstractWeatherData, ts::AbstractTimeSpan)
+
+Load weather values during date specified in TimeSpan `ts`. Return
+price as `Vector{Float64}` with same size as `ts`.
+"""
 function loadweather end
 
 immutable OutdoorTemperature <: AbstractWeatherData end
@@ -90,6 +123,7 @@ loadweather(::GTI, ts::AbstractTimeSpan) = loaddata(ts, 9)
 
 ################################################################################
 # Generic
+# load weather data from specified `column` in weather.jld
 function loaddata(ts::AbstractTimeSpan, column::Int)
     weather = loadweather()
     ts, tf = unravel(ts)
