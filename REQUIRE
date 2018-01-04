@@ -1,3 +1,7 @@
 JSON
 JuMP
 JLD
+Scenarios
+StochDynamicProgramming
+Lbfgsb
+ProgressMeter
