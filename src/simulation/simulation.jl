@@ -1,6 +1,7 @@
 # Run simulation on given model and scenarios
 
 export Simulator, SimulationResult
+import Base: show
 
 
 ################################################################################
@@ -9,6 +10,10 @@ struct SimulationResult
     costs::Vector{Float64}
     stocks::Array{Float64, 3}
     controls::Array{Float64, 3}
+end
+
+function show(io::IO, res::SimulationResult)
+    @printf("Costs: %.4f ± %.4f €\n", mean(res.costs), std(res.costs))
 end
 
 ################################################################################

@@ -97,7 +97,7 @@ function genrandomproduction(val, δ)
 end
 
 genforecast(pv::PVProduction, ts::AbstractTimeSpan) = reshape(production(pv, ts), ntimesteps(ts), 1)
-production(pv::PVProduction, ts::AbstractTimeSpan) = pv.η * pv.area * loadweather(GTI(), ts)
+production(pv::PVProduction, ts::AbstractTimeSpan) = 0.001 * pv.η * pv.area * loadweather(GTI(), ts)
 
 
 function fit(pv::PVProduction, ts::AbstractTimeSpan)
