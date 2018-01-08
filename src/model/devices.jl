@@ -54,11 +54,17 @@ function ubounds end
 # Battery
 struct Battery <: AbstractDevice
     name::String
+    # battery lower bound
     binf::Float64
+    # battery upper bound
     bup::Float64
+    # max charge rate
     δb::Float64
+    # charge yield
     ρi::Float64
+    # discharge yield
     ρe::Float64
+    # auto-discharge rate
     αc::Float64
 end
 function Battery(name::String)
@@ -86,11 +92,17 @@ ubounds(bat::Battery) = [(0., bat.δb), (0., bat.δb)]
 # EHWT
 struct HotWaterTank <: AbstractDevice
     name::Symbol
+    # auto-discharge rate
     αt::Float64
+    # charge yield
     ηi::Float64
+    # discharge yield
     ηe::Float64
+    # tank max energy
     hmax::Float64
+    # tank max power
     power::Float64
+    # allowable temperature variation
     ΔT::Float64
 end
 function HotWaterTank(name::String)
@@ -129,11 +141,16 @@ struct R6C2 <: AbstractDevice
     altitude::Float64
     latitude::Float64
 
+    # ground surface in m2
     Ssol::Float64
+    # surface of window in m2
     Surf_window::Float64
+    # surface of walls in m2
     Surf_wall::Vector{Float64}
+    # house's height
     H::Float64
 
+    # R6C2 parameters
     Ci::Float64
     Cw::Float64
     Giw::Float64
@@ -144,8 +161,10 @@ struct R6C2 <: AbstractDevice
     Rw::Float64
     Re::Float64
 
+    # ventilation
     Fv::Float64
     fframe::Float64
+    # wall's albedo
     albedo::Float64
     esp::Float64
     λe::Float64
@@ -237,11 +256,17 @@ ubounds(thm::R6C2) = [(0., thm.heater)]
 # TODO: implement CHP
 struct MicroCHP <: AbstractDevice
     name::String
+    # max gas power
     power::Float64
+    # thermal yield
     yield::Float64
+    # proportion of elec
     eta_elec::Float64
+    # max power elec
     power_elec::Float64
+    # max thermal power
     power_therm::Float64
+    # TODO
     hwt::HotWaterTank
 end
 function MicroCHP(name)
