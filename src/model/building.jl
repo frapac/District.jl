@@ -228,7 +228,6 @@ function buildload(house::House)
     ntime = ntimesteps(house.time)
 
     # build load corresponding to device
-    xindex = 1
     uindex = 1
     excost = Expr(:call, :+)
     for dev in house.devices
@@ -284,6 +283,16 @@ realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
 get_irradiation(house::House) = get_irradiation(getdevice(house, R6C2), house.time)
 
 # TODO: avoid side effect
+"Get position of device in house.device."
+getposition(house::House, d::AbstractDevice) = findfirst(house.devices, d)
+xindex(house::House, d::AbstractDevice) = cumsum(nstates.(house.devices))[getposition(house, d)]
+uindex(house::House, d::AbstractDevice) = cumsum(ncontrols.(house.devices))[getposition(house, d)]
+
+"Return first device with type `dev`."
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]
+
+"Speficy whether `house` has device with type `dev`."
 hasdevice(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
+
+"Speficy whether `house` has noise with type `dev`."
 hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
