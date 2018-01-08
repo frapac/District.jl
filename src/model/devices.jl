@@ -382,7 +382,7 @@ elecload(h::ElecHeater, uindex::Int) = :(u[$uindex])
 thermalload(h::ElecHeater, uindex::Int) = :(u[$uindex])
 nstates(h::ElecHeater) = 0
 ncontrols(h::ElecHeater) = 1
-xbounds(h::ElecHeater) = []
+xbounds(h::ElecHeater) = Tuple{Float64, Float64}[]
 ubounds(h::ElecHeater) = [(0., h.maxheating)]
 
 
@@ -395,7 +395,7 @@ elecload(h::ThermalHeater, uindex::Int) = :(0.)
 thermalload(h::ThermalHeater, uindex::Int) = :(u[$uindex])
 nstates(h::ThermalHeater) = 0
 ncontrols(h::ThermalHeater) = 1
-xbounds(h::ThermalHeater) = []
+xbounds(h::ThermalHeater) = Tuple{Float64, Float64}[]
 ubounds(h::ThermalHeater) = [(0., h.maxheating)]
 
 
