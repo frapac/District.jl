@@ -90,8 +90,8 @@ using District, Scenarios
 
 
     @testset "Devices" begin
-        for (Stock, ids) in zip([Battery, ElecHotWaterTank, R6C2, R6C2, MicroCHP],
-                                ["bat0", "ehwt0", "rt1988", "rt2012", "chp0"])
+        for (Stock, ids) in zip([Battery, ElecHotWaterTank, ThermalHotWaterTank, R6C2, R6C2, MicroCHP],
+                                ["bat0", "ehwt0", "twht0", "rt1988", "rt2012", "chp0"])
             st = Stock(ids)
             @test isa(st, Stock)
             @test isa(District.elecload(st, 1), Union{Expr, Float64})

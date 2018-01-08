@@ -2,10 +2,7 @@
 - in Summer, inner tempeature is above 40C ...
 
 # Devices
-- add consistency between devices (plug&play): use Dict
 - add AC conditioner
-- clean tank
-
 
 # Buildings
 - check initial state

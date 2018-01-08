@@ -285,6 +285,11 @@ function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty)
     push!(hwt.output.args, :(w[$indw]))
 end
 
+function link!(house::House, hwt::ThermalHotWaterTank, h::ThermalHeater)
+    indu = uindex(house, h)
+    push!(hwt.output.args, :(u[$indu]))
+end
+
 # add heater to R6C2
 function link!(house::House, thm::R6C2, heat::AbstractHeater)
     indu = uindex(house, heat)

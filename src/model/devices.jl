@@ -11,7 +11,8 @@
 ################################################################################
 
 # TODO: add check consistency
-export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater
+export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTank,
+       ThermalHeater
 
 abstract type AbstractDevice <: AbstractModel end
 
@@ -159,6 +160,56 @@ ncontrols(hwt::ElecHotWaterTank) = 1
 xbounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.power)]
 
+
+################################################################################
+# Thermal hot water tank
+# THWT has only a output and no input by construction.
+struct ThermalHotWaterTank <: AbstractDevice
+    name::Symbol
+    # auto-discharge rate
+    αt::Float64
+    # charge yield
+    ηi::Float64
+    # discharge yield
+    ηe::Float64
+    # tank max energy
+    hmax::Float64
+    # allowable temperature variation
+    ΔT::Float64
+    # input flow
+    input::Expr
+    # output flow
+    output::Expr
+end
+function ThermalHotWaterTank(name::String)
+    path = "$WD/data/devices/tank/$name.json"
+    data = JSON.parsefile(path)
+
+    dt = data["tempmax"] - data["tempmin"]
+    hmax = 4.2*data["volume"]*dt / 3.6
+    @assert hmax > 0
+    # by default, output is null
+    input = Expr(:call, +, 0)
+    output = Expr(:call, +, 0)
+    ThermalHotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
+                 hmax, dt, input, output)
+end
+
+
+# TODO: consistency with demands
+function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
+    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*$(hwt.input) - $(hwt.ηe)*$(hwt.output)))]
+    return dyn
+end
+
+elecload(hwt::ThermalHotWaterTank, uindex::Int) = :(0.)
+thermalload(hwt::ThermalHotWaterTank, uindex::Int) = :(0.)
+
+nstates(hwt::ThermalHotWaterTank) = 1
+ncontrols(hwt::ThermalHotWaterTank) = 0
+#TODO: dry bounds
+xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
+ubounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[]
 
 ################################################################################
 # R6C2 model
@@ -338,9 +389,16 @@ ubounds(h::ElecHeater) = [(0., h.maxheating)]
 # TODO: add dynamics of ThermalHeater
 struct ThermalHeater <: AbstractHeater
     maxheating::Float64
-    input::Expr
-    output::Expr
 end
+parsedevice(h::ThermalHeater, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+elecload(h::ThermalHeater, uindex::Int) = :(0.)
+thermalload(h::ThermalHeater, uindex::Int) = :(u[$uindex])
+nstates(h::ThermalHeater) = 0
+ncontrols(h::ThermalHeater) = 1
+xbounds(h::ThermalHeater) = []
+ubounds(h::ThermalHeater) = [(0., h.maxheating)]
+
+
 
 ################################################################################
 # Bus
