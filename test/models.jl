@@ -68,7 +68,7 @@ using District, Scenarios
 
         @testset "Fit & Forecast" begin
             for ξ in [Demands(10, 1), PVProduction(4, .15, 2, 0)]
-                @test isa(District.elecload(ξ, 1), Expr)
+                @test isa(District.elecload(ξ, 1), Union{Expr, Real})
                 @test isa(District.nnoise(ξ), Int)
 
                 # test fiting
@@ -94,7 +94,7 @@ using District, Scenarios
                                 ["bat0", "ehwt0", "rt1988", "rt2012", "chp0"])
             st = Stock(ids)
             @test isa(st, Stock)
-            @test isa(District.elecload(st, 1), Expr)
+            @test isa(District.elecload(st, 1), Union{Expr, Float64})
             @test isa(District.xbounds(st), Vector{Tuple{Float64, Float64}})
             @test isa(District.ubounds(st), Vector{Tuple{Float64, Float64}})
             @test length(District.xbounds(st)) == District.nstates(st)

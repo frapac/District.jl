@@ -104,8 +104,8 @@ end
 elecload(bat::Battery, uindex) = :(u[$uindex] - u[$(uindex+1)])
 nstates(bat::Battery) = 1
 ncontrols(bat::Battery) = 2
-xbounds(bat::Battery) = [(bat.binf, bat.bup)]
-ubounds(bat::Battery) = [(0., bat.δb), (0., bat.δb)]
+xbounds(bat::Battery) = Tuple{Float64, Float64}[(bat.binf, bat.bup)]
+ubounds(bat::Battery) = Tuple{Float64, Float64}[(0., bat.δb), (0., bat.δb)]
 
 
 ################################################################################
@@ -156,8 +156,8 @@ thermalload(hwt::ElecHotWaterTank, uindex::Int) = :(0.)
 nstates(hwt::ElecHotWaterTank) = 1
 ncontrols(hwt::ElecHotWaterTank) = 1
 #TODO: dry bounds
-xbounds(hwt::ElecHotWaterTank) = [(0., hwt.hmax)]
-ubounds(hwt::ElecHotWaterTank) = [(0., hwt.power)]
+xbounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
+ubounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.power)]
 
 
 ################################################################################
@@ -274,11 +274,11 @@ function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     return dyn
 end
 
-elecload(thm::R6C2, uindex::Int) = :(0)
+elecload(thm::R6C2, uindex::Int) = :(0.)
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 0
-xbounds(thm::R6C2) = [(-50., 100.), (-50., 100.)]
-ubounds(thm::R6C2) = []
+xbounds(thm::R6C2) = Tuple{Float64, Float64}[(-50., 100.), (-50., 100.)]
+ubounds(thm::R6C2) = Tuple{Float64, Float64}[]
 
 
 ################################################################################
@@ -312,8 +312,8 @@ elecload(chp::MicroCHP, uindex::Int) = :(-u[$uindex]*$(chp.power_elec))
 thermalload(chp::MicroCHP, uindex::Int) = :(u[$uindex]*$(chp.power_therm))
 nstates(chp::MicroCHP) = 0
 ncontrols(chp::MicroCHP) = 1
-xbounds(chp::MicroCHP) = []
-ubounds(chp::MicroCHP) = [(0., 1.)]
+xbounds(chp::MicroCHP) = Tuple{Float64, Float64}[]
+ubounds(chp::MicroCHP) = Tuple{Float64, Float64}[(0., 1.)]
 
 
 
@@ -353,8 +353,8 @@ Connection(kva) = Connection(gensym(), kva)
 
 parsedevice(conn::Connection, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
 
-elecload(conn::Connection, uindex::Int) = :(0)
+elecload(conn::Connection, uindex::Int) = :(0.)
 nstates(conn::Connection) = 0
 ncontrols(conn::Connection) = 1
-xbounds(conn::Connection) = []
-ubounds(conn::Connection) = [(-conn.kva, conn.kva)]
+xbounds(conn::Connection) = Tuple{Float64, Float64}[]
+ubounds(conn::Connection) = Tuple{Float64, Float64}[(-conn.kva, conn.kva)]
