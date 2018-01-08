@@ -12,8 +12,6 @@ export House, add!
 export nstocks, nnoises
 
 # GENERIC TYPES
-# Definition of node in graph
-abstract type AbstractNode end
 abstract type AbstractBuilding <: AbstractNode end
 
 
@@ -215,6 +213,7 @@ function builddynamic(house::House)
         end
     end
 
+    println(exdyn)
     @eval dynam(t, x, u, w) = $exdyn
     return dynam
 end
@@ -276,6 +275,21 @@ function getrealcost(house::House)
 end
 realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
 
+################################################################################
+# LINKERS
+################################################################################
+# TODO: use thermalload instead
+# We can link EHWT only to DHW demands
+function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty)
+    indw = windex(house, w)
+    push!(hwt.output.args, :(w[$indw]))
+end
+
+# add heater to R6C2
+function link!(house::House, thm::R6C2, heat::AbstractHeater)
+    indu = uindex(house, heat)
+    push!(thm.input.args, :(u[$indu]))
+end
 
 ################################################################################
 # UTILS
@@ -285,8 +299,10 @@ get_irradiation(house::House) = get_irradiation(getdevice(house, R6C2), house.ti
 # TODO: avoid side effect
 "Get position of device in house.device."
 getposition(house::House, d::AbstractDevice) = findfirst(house.devices, d)
+getposition(house::House, w::AbstractUncertainty) = findfirst(house.noises, w)
 xindex(house::House, d::AbstractDevice) = cumsum(nstates.(house.devices))[getposition(house, d)]
 uindex(house::House, d::AbstractDevice) = cumsum(ncontrols.(house.devices))[getposition(house, d)]
+windex(house::House, w::AbstractUncertainty) = cumsum(nnoise.(house.noises))[getposition(house, w)]
 
 "Return first device with type `dev`."
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]

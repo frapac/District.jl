@@ -11,9 +11,9 @@
 ################################################################################
 
 # TODO: add check consistency
-export Battery, HotWaterTank, MicroCHP, R6C2
+export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater
 
-abstract type AbstractDevice end
+abstract type AbstractDevice <: AbstractModel end
 
 """
     elecload(d::AbstractDevice, uindex::Int)
@@ -23,6 +23,16 @@ Get impact of Device `d` on grid's load balance as an Expression.
 dynamics.
 """
 function elecload end
+
+"""
+    thermalload(d::AbstractDevice, uindex::Int)
+
+Get thermal load outputed by device `d`.
+`uindex` specified the starting index of devices control in grid's
+dynamics.
+"""
+function thermalload end
+
 
 """
     parsedevice(d::AbstractDevice, xindex::Int, uindex::Int, dt::Float64, p::Dict)
@@ -49,6 +59,16 @@ function xbounds end
 
 "Get controls bounds for Device `d`."
 function ubounds end
+
+"Specify whether device is stock"
+function isstock end
+
+################################################################################
+# Generic implementation
+isstock(dev::AbstractDevice) = nstates(dev) > 0
+
+# by default, thermal load is set to 0
+thermalload(d::AbstractDevice, uindex::Int) = :(0)
 
 ################################################################################
 # Battery
@@ -89,8 +109,9 @@ ubounds(bat::Battery) = [(0., bat.δb), (0., bat.δb)]
 
 
 ################################################################################
-# EHWT
-struct HotWaterTank <: AbstractDevice
+# Electrical hot water tank
+# EHWT has only a output and no input by construction.
+struct ElecHotWaterTank <: AbstractDevice
     name::Symbol
     # auto-discharge rate
     αt::Float64
@@ -104,38 +125,44 @@ struct HotWaterTank <: AbstractDevice
     power::Float64
     # allowable temperature variation
     ΔT::Float64
+    # output flow
+    output::Expr
 end
-function HotWaterTank(name::String)
+function ElecHotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
     dt = data["tempmax"] - data["tempmin"]
     hmax = 4.2*data["volume"]*dt / 3.6
     @assert hmax > 0
-    HotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
-                 hmax, data["power"], dt)
+    # by default, output is null
+    output = Expr(:call, +, 0)
+    ElecHotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
+                 hmax, data["power"], dt, output)
 end
 
 
 # TODO: consistency with demands
-function parsedevice(hwt::HotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
+function parsedevice(hwt::ElecHotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     # convert l/h to W
     η = hwt.ηe * 4.2e-3 * 20
-    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(η)*w[2]))]
+    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(η)*$(hwt.output)))]
     return dyn
 end
 
-elecload(hwt::HotWaterTank, uindex::Int) = :(u[$uindex])
+elecload(hwt::ElecHotWaterTank, uindex::Int) = :(u[$uindex])
+thermalload(hwt::ElecHotWaterTank, uindex::Int) = :(0.)
 
-nstates(hwt::HotWaterTank) = 1
-ncontrols(hwt::HotWaterTank) = 1
+nstates(hwt::ElecHotWaterTank) = 1
+ncontrols(hwt::ElecHotWaterTank) = 1
 #TODO: dry bounds
-xbounds(hwt::HotWaterTank) = [(0., hwt.hmax)]
-ubounds(hwt::HotWaterTank) = [(0., hwt.power)]
+xbounds(hwt::ElecHotWaterTank) = [(0., hwt.hmax)]
+ubounds(hwt::ElecHotWaterTank) = [(0., hwt.power)]
 
 
 ################################################################################
 # R6C2 model
+# by default, R6C2 has only input (corresponding to heating load)
 struct R6C2 <: AbstractDevice
     name::Symbol
     altitude::Float64
@@ -168,7 +195,8 @@ struct R6C2 <: AbstractDevice
     albedo::Float64
     esp::Float64
     λe::Float64
-    heater::Float64
+    # input
+    input::Expr
 end
 function R6C2(name)
     path = "$WD/data/devices/house/$name.json"
@@ -220,39 +248,41 @@ function R6C2(name)
     albedo = params["albedo"]
     esp = params["esp"]
     le = params["lambdae"]
-    heater = params["heater"]
+    # by default, input is null
+    input = Expr(:call, +, 0)
     R6C2(name, altitude, latitude,
          Ssol, Surf_window, Surf_wall, H,
          Ci, Cw, Giw, Gie, Gwe, Ri, Rs, Rw, Re,
-         Fv, fframe, albedo, esp, le, heater)
+         Fv, fframe, albedo, esp, le, input)
 end
 
 
 function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dt2 = dt * 3600
+    # WARNING: here, the dynamic is express in Celsius degree instead of kWh
     dyn = [:(
         x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
                                         $(thm.Gwe)*($(p["text"])[t]-x[$xindex]) +
                                         $(thm.Re)/($(thm.Re)+$(thm.Rw))*$(p["pext"])[t] +
                                         $(thm.Ri)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
-                                        1000*$(thm.λe)*u[$xindex])), # wall's temperature
+                                        1000*$(thm.λe)*$(thm.input))), # wall's temperature
         :(x[$(xindex+1)] + $dt2/$(thm.Ci)*($(thm.Giw)*(x[$xindex]-x[$(xindex+1)]) +
                                          $(thm.Gie)*($(p["text"])[t]-x[$(xindex+1)]) +
                                          $(thm.Rs)/($(thm.Ri)+$(thm.Rs))*$(p["pint"])[t] +
-                          1000*$(1-thm.λe)*u[$uindex]) # inner temperature
+                                         1000*$(1-thm.λe)*$(thm.input)) # inner temperature
          )]
     return dyn
 end
 
-elecload(thm::R6C2, uindex::Int) = :(u[$uindex])
+elecload(thm::R6C2, uindex::Int) = :(0)
 nstates(thm::R6C2) = 2
-ncontrols(thm::R6C2) = 1
+ncontrols(thm::R6C2) = 0
 xbounds(thm::R6C2) = [(-50., 100.), (-50., 100.)]
-ubounds(thm::R6C2) = [(0., thm.heater)]
+ubounds(thm::R6C2) = []
 
 
 ################################################################################
-# CHP model
+# CHP and burners models
 # TODO: implement CHP
 struct MicroCHP <: AbstractDevice
     name::String
@@ -266,8 +296,6 @@ struct MicroCHP <: AbstractDevice
     power_elec::Float64
     # max thermal power
     power_therm::Float64
-    # TODO
-    hwt::HotWaterTank
 end
 function MicroCHP(name)
     path = "$WD/data/devices/chp/$name.json"
@@ -275,22 +303,44 @@ function MicroCHP(name)
     power = data["CHP_POWER"]
     yield = data["CHP_YIELD"]
     eta = data["SHARE_ELEC"]
-    hwt = HotWaterTank(data["watertank"])
-
-    MicroCHP(name, power, yield, eta, power*yield*eta, power*yield*(1-eta), hwt)
+    MicroCHP(name, power, yield, eta, power*yield*eta, power*yield*(1-eta))
 end
 
-function parsedevice(chp::MicroCHP, xindex::Int, uindex::Int, dt, p::Dict=Dict())
-    dyn = [:($(chp.hwt.αt)*x[$xindex] + $dt*($(chp.hwt.ηi)*$(chp.power_therm)*u[$uindex] - $(chp.hwt.ηe)*(u[4]+w[2])))]
-    return dyn
-end
+parsedevice(chp::MicroCHP, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
 
 elecload(chp::MicroCHP, uindex::Int) = :(-u[$uindex]*$(chp.power_elec))
-nstates(chp::MicroCHP) = 1
+thermalload(chp::MicroCHP, uindex::Int) = :(u[$uindex]*$(chp.power_therm))
+nstates(chp::MicroCHP) = 0
 ncontrols(chp::MicroCHP) = 1
-xbounds(chp::MicroCHP) = xbounds(chp.hwt)
+xbounds(chp::MicroCHP) = []
 ubounds(chp::MicroCHP) = [(0., 1.)]
 
+
+
+
+################################################################################
+# Heaters
+abstract type AbstractHeater <: AbstractDevice end
+
+struct ElecHeater <: AbstractHeater
+    maxheating::Float64
+end
+
+parsedevice(h::ElecHeater, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+elecload(h::ElecHeater, uindex::Int) = :(u[$uindex])
+thermalload(h::ElecHeater, uindex::Int) = :(u[$uindex])
+nstates(h::ElecHeater) = 0
+ncontrols(h::ElecHeater) = 1
+xbounds(h::ElecHeater) = []
+ubounds(h::ElecHeater) = [(0., h.maxheating)]
+
+
+# TODO: add dynamics of ThermalHeater
+struct ThermalHeater <: AbstractHeater
+    maxheating::Float64
+    input::Expr
+    output::Expr
+end
 
 ################################################################################
 # Bus

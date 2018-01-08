@@ -21,7 +21,7 @@ using District
     @test length(house.devices) == 1
     ex = District.parsedevice(b, 1, 1, .25)
 
-    hwt = HotWaterTank("ehwt0")
+    hwt = ElecHotWaterTank("ehwt0")
     add!(house, hwt)
     ex = District.parsedevice(hwt, 1, 1, .25)
     @test nstocks(house) == 2

@@ -5,11 +5,10 @@
 # - TimeSpan is a proxy to load a specified time period.
 ################################################################################
 
-# TODO: change files' name
-
-
 export TimeSpan
 
+################################################################################
+# Define generic time period
 abstract type AbstractTimeSpan end
 
 
@@ -38,3 +37,12 @@ function weekcycle(ts::TimeSpan)
     # return modulo of ti:tf range
     return rem.((ti:tf)-1, weekts) + 1
 end
+
+
+################################################################################
+# Define abstract type
+# abstract model templates elements inside Nodes
+abstract type AbstractModel end
+
+# Definition of node in graph
+abstract type AbstractNode end

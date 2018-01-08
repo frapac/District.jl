@@ -17,6 +17,5 @@
     "fframe":0.9,
     "albedo":0.0,
     "esp":0.6,
-    "lambdae": 0.35,
-    "heater": 6
+    "lambdae": 0.35
 }

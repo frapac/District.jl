@@ -12,7 +12,7 @@
 
 export loadnoise, Demands, PVProduction
 
-abstract type AbstractUncertainty end
+abstract type AbstractUncertainty <: AbstractModel end
 
 
 """

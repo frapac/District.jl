@@ -90,7 +90,7 @@ using District, Scenarios
 
 
     @testset "Devices" begin
-        for (Stock, ids) in zip([Battery, HotWaterTank, R6C2, R6C2, MicroCHP],
+        for (Stock, ids) in zip([Battery, ElecHotWaterTank, R6C2, R6C2, MicroCHP],
                                 ["bat0", "ehwt0", "rt1988", "rt2012", "chp0"])
             st = Stock(ids)
             @test isa(st, Stock)

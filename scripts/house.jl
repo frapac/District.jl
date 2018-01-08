@@ -13,18 +13,24 @@ house = House(ts)
 b = Battery("bat0")
 add!(house, b)
 
-hwt = HotWaterTank("ehwt0")
+hwt = ElecHotWaterTank("ehwt0")
 add!(house, hwt)
 
 thm = R6C2("rt1988")
 add!(house, thm)
 
+heat = ElecHeater(6.)
+add!(house, heat)
+
+District.link!(house, thm, heat)
 
 # Add noises
 wdem = Demands(10, 1)
 add!(house, wdem)
 wpv = PVProduction(1, .15, 20, 0)
 add!(house, wpv)
+
+District.link!(house, hwt, wdem)
 
 dynam = District.builddynamic(house)
 load = District.buildload(house)
