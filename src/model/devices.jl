@@ -96,8 +96,10 @@ function HotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
+    hmax = 4.2 / 3.6 * data["volume"] * (data["tempmax"] - data["tempmin"])
+    @assert hmax > 0
     HotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
-                 data["hmax"], data["power"])
+                 hmax, data["power"])
 end
 
 
@@ -259,3 +261,21 @@ nstates(chp::MicroCHP) = 1
 ncontrols(chp::MicroCHP) = 1
 xbounds(chp::MicroCHP) = xbounds(chp.hwt)
 ubounds(chp::MicroCHP) = [(0., 1.)]
+
+
+################################################################################
+# Bus
+# TODO: does not inherit from AbstractDevice
+struct Connection <: AbstractDevice
+    name::String
+    kva::Float64
+end
+Connection(kva) = Connection(gensym(), kva)
+
+parsedevice(conn::Connection, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+
+elecload(conn::Connection, uindex::Int) = :(0)
+nstates(conn::Connection) = 0
+ncontrols(conn::Connection) = 1
+xbounds(conn::Connection) = []
+ubounds(conn::Connection) = [(-conn.kva, conn.kva)]
