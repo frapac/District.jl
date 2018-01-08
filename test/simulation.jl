@@ -16,7 +16,7 @@ function buildhouse()
     house = House(ts)
 
     # add devices to house
-    for (Device, name) in zip([Battery, HotWaterTank, R6C2], ["bat0", "ehwt0", "rt1988"])
+    for (Device, name) in zip([Battery, ElecHotWaterTank, R6C2], ["bat0", "ehwt0", "rt1988"])
         d = Device(name)
         add!(house, d)
     end
@@ -29,7 +29,7 @@ function buildhouse()
     load = District.buildload(house)
 
     # add initial pos
-    x0 = [.55, 6., 16., 16.]
+    x0 = [.55, 2., 16., 16.]
     District.build!(house, x0)
 
     return house
