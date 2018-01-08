@@ -29,7 +29,7 @@ add!(house, wpv)
 dynam = District.builddynamic(house)
 load = District.buildload(house)
 
-x0 = [.55, 6., 16., 16.]
+x0 = [.55, 2., 16., 16.]
 District.build!(house, x0)
 
 

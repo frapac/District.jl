@@ -54,6 +54,8 @@ function fit end
 
 ################################################################################
 # Demands Uncertainties
+# Index 1: electricity load at 15mn timesteps [W]
+# Index 2: hot water demands at 15mn timesteps [l/s]
 immutable Demands <: AbstractUncertainty
     nbins::Int
     idhouse::Int

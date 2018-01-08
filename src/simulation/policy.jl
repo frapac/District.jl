@@ -62,7 +62,7 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 
     # TODO: clean final step
     @variable(m, zf >= 0)
-    @constraint(m, zf >= 6 - x[2, ntime])
+    @constraint(m, zf >= 2. - x[2, ntime])
 
     @variable(m, w[1:model.dimNoises, 1:ntime])
     m.ext[:noise] = @constraint(m, w[:, 1] .== oracle(t))

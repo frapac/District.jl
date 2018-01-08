@@ -134,7 +134,7 @@ function final_cost(model, m)
     xf = m[:xf]
     @variable(m, cost)
     z1 = @JuMP.variable(m, lowerbound=0)
-    @JuMP.constraint(m, z1 >= 6 - xf[2])
+    @JuMP.constraint(m, z1 >= 2. - xf[2])
     @JuMP.constraint(m, alpha == PENAL_TANK*z1)
 end
 

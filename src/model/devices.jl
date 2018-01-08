@@ -91,21 +91,25 @@ struct HotWaterTank <: AbstractDevice
     ηe::Float64
     hmax::Float64
     power::Float64
+    ΔT::Float64
 end
 function HotWaterTank(name::String)
     path = "$WD/data/devices/tank/$name.json"
     data = JSON.parsefile(path)
 
-    hmax = 4.2 / 3.6 * data["volume"] * (data["tempmax"] - data["tempmin"])
+    dt = data["tempmax"] - data["tempmin"]
+    hmax = 4.2*data["volume"]*dt / 3.6
     @assert hmax > 0
     HotWaterTank(name, data["ALPHA_H"], data["etain"], data["etaout"],
-                 hmax, data["power"])
+                 hmax, data["power"], dt)
 end
 
 
 # TODO: consistency with demands
 function parsedevice(hwt::HotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
-    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(hwt.ηe)*w[2]))]
+    # convert l/h to W
+    η = hwt.ηe * 4.2e-3 * 20
+    dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*u[$uindex] - $(η)*w[2]))]
     return dyn
 end
 

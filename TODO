@@ -2,9 +2,10 @@
 - in Summer, inner tempeature is above 40C ...
 
 # Devices
-- add capacity of tank in liters
 - add consistency between devices (plug&play): use Dict
 - add AC conditioner
+- clean tank
+
 
 # Buildings
 - check initial state
