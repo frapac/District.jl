@@ -16,9 +16,13 @@ house = House(ts)
 # Add devices
 devices = [Battery, ElecHotWaterTank, R6C2, ElecHeater]
 names = ["bat0", "ehwt0", "rt1988", 6.]
+dev = []
 for (Device, name) in zip(devices, names)
-    add!(house, Device(name))
+    d = Device(name)
+    add!(house, d)
+    push!(dev, d)
 end
+bat, hwt, thm, heat = dev
 
 # link heater to thermal envelope
 District.link!(house, thm, heat)

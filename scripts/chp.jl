@@ -3,10 +3,10 @@ push!(LOAD_PATH, "..")
 
 using District, StochDynamicProgramming
 
-ALGO = "MPC"
+ALGO = "SDDP"
 
 # Build problem
-ts = TimeSpan(200, 1)
+ts = TimeSpan(1, 1)
 house = House(ts)
 
 # Add devices
@@ -25,8 +25,9 @@ add!(house, thm)
 heat = ThermalHeater(6.)
 add!(house, heat)
 
-District.link!(house, thm, heat)
-District.link!(house, hwt, heat)
+link!(house, thm, heat)
+link!(house, hwt, heat)
+link!(house, hwt, chp)
 
 # Add noises
 wdem = Demands(10, 1)
@@ -35,6 +36,10 @@ add!(house, wdem)
 
 dynam = District.builddynamic(house)
 load = District.buildload(house)
+
+set!(house, EDFPrice(ts))
+set!(house, ComfortPrice(ts))
+set!(house, District.EngieGasPrice(ts))
 
 x0 = [.55, 2., 16., 16.]
 District.build!(house, x0)

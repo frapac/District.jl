@@ -8,7 +8,7 @@
 ################################################################################
 # TODO: add generic methods for AbstractBuilding
 
-export House, add!, set!
+export House, add!, set!, link!
 export nstocks, nnoises
 
 # GENERIC TYPES
@@ -52,11 +52,14 @@ function build!(house::House, x0::Vector{Float64})
     xb = xbounds(house)
     ub = ubounds(house)
 
-
+    # build probability laws
     laws = buildlaws(house)
+    # build objective function
     costm = objective(house)
+    # build final cost
     fcost = final_cost
 
+    # build SP model
     spmodel = StochDynamicProgramming.LinearSPModel(ntime, ub,
                                                   x0, costm,
                                                   dynam,
@@ -77,6 +80,7 @@ end
 ################################################################################
 # COST DEFINITION
 ################################################################################
+# TODO: define more properly AffExpr
 function objective(house::House)
     bill = house.billing
 
@@ -92,6 +96,11 @@ function objective(house::House)
         zth1 = @JuMP.variable(m, lowerbound=0)
         if ~isa(bill.comfort, NoneComfort)
             @constraint(m, zth1 >= -bill.comfort(t)*(x[4] - setpoint(bill.comfort, t) + 1))
+        end
+
+        zgas = @JuMP.variable(m, lowerbound=0)
+        if ~isa(bill.gas, NoneGasPrice)
+            @constraint(m, zgas >= bill.gas(t)*gasload(t, x, u, w))
         end
 
         return JuMP.AffExpr(zel1 + zth1)
@@ -205,10 +214,13 @@ function buildload(house::House)
     # build load corresponding to device
     uindex = 1
     excost = Expr(:call, :+)
+    exgas = Expr(:call, :+)
     for dev in house.devices
         load = elecload(dev, uindex)
+        gas = gasload(dev, uindex)
         uindex += ncontrols(dev)
         push!(excost.args, load)
+        push!(exgas.args, gas)
     end
 
     # build load corresponding to noise
@@ -220,6 +232,7 @@ function buildload(house::House)
 
     println(excost)
     @eval elecload(t, x, u, w) = $excost
+    @eval gasload(t, x, u, w) = $exgas
     return elecload
 end
 
@@ -261,6 +274,11 @@ end
 function link!(house::House, hwt::ThermalHotWaterTank, h::ThermalHeater)
     indu = uindex(house, h)
     push!(hwt.output.args, :(u[$indu]))
+end
+
+function link!(house::House, hwt::ThermalHotWaterTank, chp::MicroCHP)
+    indu = uindex(house, chp)
+    push!(hwt.input.args, :($(thermalload(chp, indu))))
 end
 
 # add heater to R6C2

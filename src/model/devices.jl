@@ -33,6 +33,12 @@ dynamics.
 """
 function thermalload end
 
+"""
+    gasload(d::AbstractDevice, uindex::Int)
+
+Get gas load of device `d`.
+"""
+function gasload end
 
 """
     parsedevice(d::AbstractDevice, xindex::Int, uindex::Int, dt::Float64, p::Dict)
@@ -67,8 +73,9 @@ function isstock end
 # Generic implementation
 isstock(dev::AbstractDevice) = nstates(dev) > 0
 
-# by default, thermal load is set to 0
+# by default, thermal and gas load are set to 0
 thermalload(d::AbstractDevice, uindex::Int) = :(0)
+gasload(d::AbstractDevice, uindex::Int) = :(0)
 
 ################################################################################
 # Battery
@@ -355,6 +362,7 @@ parsedevice(chp::MicroCHP, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[
 
 elecload(chp::MicroCHP, uindex::Int) = :(-u[$uindex]*$(chp.power_elec))
 thermalload(chp::MicroCHP, uindex::Int) = :(u[$uindex]*$(chp.power_therm))
+gasload(chp::MicroCHP, uindex::Int) = :(u[$uindex] * $(chp.power))
 nstates(chp::MicroCHP) = 0
 ncontrols(chp::MicroCHP) = 1
 xbounds(chp::MicroCHP) = Tuple{Float64, Float64}[]
