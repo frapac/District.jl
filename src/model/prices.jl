@@ -10,25 +10,31 @@
 ################################################################################
 
 ################################################################################
+export EDFPrice, EPEXPrice
+export NightSetPoint
+
 # Definition of prices
 abstract type AbstractPrice <: AbstractData end
+abstract type AbstractSetPoint <: AbstractData end
+abstract type AbstractBilling end
 abstract type AbstractElecPrice <: AbstractPrice end
+abstract type AbstractGasPrice <: AbstractPrice end
+abstract type AbstractComfortPrice <: AbstractPrice end
+
+
 
 
 ################################################################################
-# Price
-"""
-    loadprice(p::AbstractPrice, ts::AbstractTimeSpan)
+# Elec Price
 
-Load price values during date specified in TimeSpan `ts`. Return
-price as `Vector{Float64}` with same size as `ts`.
-"""
-function loadprice end
+immutable NoneElecPrice <: AbstractElecPrice end
 
-
+# TODO: avoid loading JSON every time EDFPrice is loaded
 # Off/On Peak tariffs
-immutable EDFPrice <: AbstractElecPrice end
-function loadprice(::EDFPrice, ts::AbstractTimeSpan)
+struct EDFPrice <: AbstractElecPrice
+    price::Vector{Float64}
+end
+function EDFPrice(ts::AbstractTimeSpan)
     tariff = JSON.parsefile("data/tariffs/elec/edf.json")
     ntime = ntimesteps(ts)
     price = ones(ntime) * tariff["offpeak"]
@@ -36,47 +42,67 @@ function loadprice(::EDFPrice, ts::AbstractTimeSpan)
         # TODO: ts is here hardcoded
         price[7*4+nd*96:23*4+nd*96] = tariff["onpeak"]
     end
-    return price
+    return EDFPrice(price)
 end
+(p::EDFPrice)(t::Int) = p.price[t]
 
 
 # French EPEX price for day-ahead auction.
 # Coming from:
 # http://www.epexspot.com/en/
-immutable EPEXPrice <: AbstractElecPrice end
-loadprice(::EPEXPrice, ts::AbstractTimeSpan) = loaddata(ts, 16)
-
-
-immutable Comfort <: AbstractPrice end
-function loadprice(::Comfort, ts::AbstractTimeSpan)
-    tariff = JSON.parsefile("data/tariffs/comfort/com0.json")
-    return tariff["comfort"]
+struct EPEXPrice <: AbstractElecPrice
+    price::Vector{Float64}
 end
+EPEXPrice(ts::AbstractTimeSpan) = EPEXPrice(loaddata(ts, 16))
+(p::EPEXPrice)(t::Int) = p.price[t]
 
 
-immutable EDFInjection <: AbstractElecPrice end
-function loadprice(::EDFInjection, ts::AbstractTimeSpan)
+################################################################################
+# Injection price
+struct EDFInjection <: AbstractElecPrice
+    price::Float64
+end
+function EDFInjection(ts::AbstractTimeSpan)
     tariff = JSON.parsefile("data/tariffs/elec/edf.json")
-    return tariff["inj"]
+    return EDFInjection(tariff["inj"])
 end
+(p::EDFInjection)(t::Int) = p.price
+
+
+################################################################################
+# Comfort Price
+
+immutable NoneComfort <: AbstractComfortPrice end
+struct ComfortPrice <: AbstractComfortPrice
+    price
+end
+function ComfortPrice(ts::AbstractTimeSpan)
+    tariff = JSON.parsefile("data/tariffs/comfort/com0.json")
+    ComfortPrice(tariff["comfort"])
+end
+(p::ComfortPrice)(t::Int) = p.price[t]
+
+
+################################################################################
+# Gas price
+
+immutable NoneGasPrice <: AbstractGasPrice end
+struct EngieGasPrice <: AbstractGasPrice
+    price::Float64
+end
+# TODO: dry
+EngieGasPrice(ts::AbstractTimeSpan) = EngieGasPrice(0.06)
+(p::EngieGasPrice)(t::Int) = p.price
+
 
 ################################################################################
 # Setpoint
-abstract type AbstractSetPoint <: AbstractData end
-
-
-"""
-    loadsetpoint(p::AbstractSetPoint, ts::AbstractTimeSpan)
-
-Load setpoint values during date specified in TimeSpan `ts`. Return
-price as `Vector{Float64}` with same size as `ts`.
-"""
-function loadsetpoint end
 
 # Night/Day setpoints
-immutable NightSetPoint <: AbstractSetPoint end
-
-function loadsetpoint(::NightSetPoint, ts::AbstractTimeSpan)
+struct NightSetPoint <: AbstractSetPoint
+    setpoint::Vector{Float64}
+end
+function NightSetPoint(ts::AbstractTimeSpan)
     setpoint = JSON.parsefile("data/tariffs/setpoints/night.json")
     ntime = ntimesteps(ts)
     price = ones(ntime) * setpoint["night"]
@@ -84,6 +110,21 @@ function loadsetpoint(::NightSetPoint, ts::AbstractTimeSpan)
         # TODO: ts is here hardcoded
         price[6*4+nd*96:22*4+nd*96] = setpoint["day"]
     end
-    return price
+    return NightSetPoint(price)
 end
 
+################################################################################
+# Billing
+mutable struct Billing <: AbstractBilling
+    elec::AbstractElecPrice
+    injection::AbstractElecPrice
+    gas::AbstractGasPrice
+    comfort::AbstractComfortPrice
+end
+
+Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort())
+# type dispatch to set prices
+set!(bill::Billing, p::AbstractElecPrice) = bill.elec = p
+set!(bill::Billing, p::AbstractComfortPrice) = bill.comfort = p
+set!(bill::Billing, p::AbstractGasPrice) = bill.gas = p
+set!(bill::Billing, p::EDFInjection) = bill.injection = p

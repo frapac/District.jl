@@ -9,8 +9,6 @@
 ################################################################################
 
 
-export loadprice, EDFPrice, EPEXPrice
-export loadsetpoint, NightSetPoint
 export loadweather, OutdoorTemperature, GTI, DHI, BHI
 
 abstract type AbstractData end

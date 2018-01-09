@@ -8,7 +8,7 @@
 ################################################################################
 # TODO: add generic methods for AbstractBuilding
 
-export House, add!
+export House, add!, set!
 export nstocks, nnoises
 
 # GENERIC TYPES
@@ -31,16 +31,16 @@ mutable struct House <: AbstractBuilding
     # House's uncertainties
     noises::Vector{AbstractUncertainty}
     # House's prices
-    prices::Vector{AbstractPrice}
+    billing::AbstractBilling
     # SP model
     model
 end
 
 House(ts::AbstractTimeSpan) = House(gensym(), ts, AbstractDevice[],
-                                    AbstractUncertainty[], AbstractPrice[], nothing)
+                                    AbstractUncertainty[], Billing(), nothing)
 add!(h::House, dev::AbstractDevice) = push!(h.devices, dev)
 add!(h::House, w::AbstractUncertainty) = push!(h.noises, w)
-add!(h::House, p::AbstractPrice) = push!(h.prices, p)
+set!(h::House, p::AbstractPrice) = set!(h.billing, p)
 
 
 nstocks(h::House) = sum(nstates.(h.devices))
@@ -222,6 +222,7 @@ end
 ################################################################################
 # LOAD DEFINITION
 ################################################################################
+# TODO: build load on the fly
 function buildload(house::House)
     ntime = ntimesteps(house.time)
 

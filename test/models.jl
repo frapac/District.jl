@@ -32,24 +32,28 @@ using District, Scenarios
     @testset "Data" begin
         ts = TimeSpan(0, 1)
 
-        @testset "Price" begin
-            for tariff in [EDFPrice, EPEXPrice]
-                price =  loadprice(tariff(), ts)
-                @test isa(price, Array{Float64})
-                @test length(price) == 96
-            end
-        end
-        @testset "Setpoint" begin
-            stp = loadsetpoint(NightSetPoint(), ts)
-            @test isa(stp, Array{Float64})
-            @test length(stp) == 96
-        end
         @testset "Weather" begin
             for serie in [GTI, BHI, DHI, OutdoorTemperature]
                 wt = loadweather(serie(), ts)
                 @test isa(wt, Array{Float64})
                 @test length(wt) == District.ntimesteps(ts)
             end
+        end
+    end
+
+
+    @testset "Price" begin
+        ts = TimeSpan(0, 1)
+        @testset "Price" begin
+            for Tariff in [EDFPrice, EPEXPrice]
+                price = Tariff(ts)
+                @test isa(price, District.AbstractPrice)
+                @test isa(price(2), Float64)
+            end
+        end
+        @testset "Setpoint" begin
+            stp = NightSetPoint(ts)
+            @test isa(stp, District.AbstractSetPoint)
         end
     end
 
