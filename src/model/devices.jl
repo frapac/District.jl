@@ -74,8 +74,8 @@ function isstock end
 isstock(dev::AbstractDevice) = nstates(dev) > 0
 
 # by default, thermal and gas load are set to 0
-thermalload(d::AbstractDevice, uindex::Int) = :(0)
-gasload(d::AbstractDevice, uindex::Int) = :(0)
+thermalload(d::AbstractDevice, uindex::Int) = :(0.)
+gasload(d::AbstractDevice, uindex::Int) = :(0.)
 
 ################################################################################
 # Battery

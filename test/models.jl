@@ -104,6 +104,8 @@ using District, Scenarios
             st = Stock(ids)
             @test isa(st, Stock)
             @test isa(District.elecload(st, 1), Union{Expr, Float64})
+            @test isa(District.gasload(st, 1), Union{Expr, Float64})
+            @test isa(District.thermalload(st, 1), Union{Expr, Float64})
             @test isa(District.xbounds(st), Vector{Tuple{Float64, Float64}})
             @test isa(District.ubounds(st), Vector{Tuple{Float64, Float64}})
             @test length(District.xbounds(st)) == District.nstates(st)
