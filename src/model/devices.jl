@@ -10,7 +10,6 @@
 #    * `w` denotes the uncertainties
 ################################################################################
 
-# TODO: add check consistency
 export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTank,
        ThermalHeater
 
@@ -143,7 +142,6 @@ function ElecHotWaterTank(name::String)
 end
 
 
-# TODO: consistency with demands
 function parsedevice(hwt::ElecHotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     # convert l/h to W
     η = hwt.ηe * 4.2e-3 * 20
@@ -156,7 +154,6 @@ thermalload(hwt::ElecHotWaterTank, uindex::Int) = :(0.)
 
 nstates(hwt::ElecHotWaterTank) = 1
 ncontrols(hwt::ElecHotWaterTank) = 1
-#TODO: dry bounds
 xbounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.power)]
 
@@ -196,7 +193,6 @@ function ThermalHotWaterTank(name::String)
 end
 
 
-# TODO: consistency with demands
 function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*$(hwt.input) - $(hwt.ηe)*$(hwt.output)))]
     return dyn
@@ -207,7 +203,6 @@ thermalload(hwt::ThermalHotWaterTank, uindex::Int) = :(0.)
 
 nstates(hwt::ThermalHotWaterTank) = 1
 ncontrols(hwt::ThermalHotWaterTank) = 0
-#TODO: dry bounds
 xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[]
 
@@ -334,7 +329,6 @@ ubounds(thm::R6C2) = Tuple{Float64, Float64}[]
 
 ################################################################################
 # CHP and burners models
-# TODO: implement CHP
 struct MicroCHP <: AbstractDevice
     name::String
     # max gas power

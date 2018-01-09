@@ -91,7 +91,6 @@ function _objectiveprice(house::House)
     p_elec = loadprice(EDFPrice(), ts)
     p_inj = loadprice(EDFInjection(), ts)
 
-
     function costm(m, t, x, u, w)
         zel1 = @JuMP.variable(m, lowerbound=0)
         @constraint(m, zel1 >= p_elec[t] * elecload(t, x, u, w))

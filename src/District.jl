@@ -25,6 +25,8 @@ include("loader.jl")
 include("model/generic.jl")
 # data
 include("model/data.jl")
+# prices
+include("model/prices.jl")
 # uncertainties
 include("model/uncertainties.jl")
 # Definition of devices
