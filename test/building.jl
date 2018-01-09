@@ -16,25 +16,26 @@ using District
     house = House(ts)
     @test isa(house, House)
 
+    # add three devices to house
     b = Battery("bat0")
     add!(house, b)
     @test length(house.devices) == 1
-    ex = District.parsedevice(b, 1, 1, .25)
 
     hwt = ElecHotWaterTank("ehwt0")
     add!(house, hwt)
-    ex = District.parsedevice(hwt, 1, 1, .25)
     @test nstocks(house) == 2
 
     thm = R6C2("rt1988")
     add!(house, thm)
-
     @test nstocks(house) == 4
 
     wdem = Demands(10, 1)
     add!(house, wdem)
-
     @test nnoises(house) == 2
+
+    # add elec and comfort price:
+    set!(house, EDFPrice(ts))
+    set!(house, ComfortPrice(ts))
 
     dynam = District.builddynamic(house)
     @test isa(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)), Vector{Float64})

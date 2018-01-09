@@ -10,7 +10,7 @@
 ################################################################################
 
 ################################################################################
-export EDFPrice, EPEXPrice
+export EDFPrice, EPEXPrice, ComfortPrice
 export NightSetPoint
 
 # Definition of prices
@@ -26,10 +26,8 @@ abstract type AbstractComfortPrice <: AbstractPrice end
 
 ################################################################################
 # Elec Price
-
 immutable NoneElecPrice <: AbstractElecPrice end
 
-# TODO: avoid loading JSON every time EDFPrice is loaded
 # Off/On Peak tariffs
 struct EDFPrice <: AbstractElecPrice
     price::Vector{Float64}
@@ -70,20 +68,6 @@ end
 
 
 ################################################################################
-# Comfort Price
-
-immutable NoneComfort <: AbstractComfortPrice end
-struct ComfortPrice <: AbstractComfortPrice
-    price
-end
-function ComfortPrice(ts::AbstractTimeSpan)
-    tariff = JSON.parsefile("data/tariffs/comfort/com0.json")
-    ComfortPrice(tariff["comfort"])
-end
-(p::ComfortPrice)(t::Int) = p.price[t]
-
-
-################################################################################
 # Gas price
 
 immutable NoneGasPrice <: AbstractGasPrice end
@@ -113,6 +97,23 @@ function NightSetPoint(ts::AbstractTimeSpan)
     return NightSetPoint(price)
 end
 
+
+################################################################################
+# Comfort Price
+immutable NoneComfort <: AbstractComfortPrice end
+struct ComfortPrice <: AbstractComfortPrice
+    price::Float64
+    setpoint::AbstractSetPoint
+end
+# TODO: setpoint is not necessarily NightSetPoint
+function ComfortPrice(ts::AbstractTimeSpan)
+    tariff = JSON.parsefile("data/tariffs/comfort/com0.json")
+    ComfortPrice(tariff["comfort"], NightSetPoint(ts))
+end
+(p::ComfortPrice)(t::Int) = p.price
+setpoint(c::ComfortPrice, t::Int) = c.setpoint.setpoint[t]
+
+
 ################################################################################
 # Billing
 mutable struct Billing <: AbstractBilling
@@ -122,7 +123,7 @@ mutable struct Billing <: AbstractBilling
     comfort::AbstractComfortPrice
 end
 
-Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort())
+Billing() = Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort())
 # type dispatch to set prices
 set!(bill::Billing, p::AbstractElecPrice) = bill.elec = p
 set!(bill::Billing, p::AbstractComfortPrice) = bill.comfort = p

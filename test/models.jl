@@ -45,7 +45,7 @@ using District, Scenarios
     @testset "Price" begin
         ts = TimeSpan(0, 1)
         @testset "Price" begin
-            for Tariff in [EDFPrice, EPEXPrice]
+            for Tariff in [EDFPrice, EPEXPrice, ComfortPrice]
                 price = Tariff(ts)
                 @test isa(price, District.AbstractPrice)
                 @test isa(price(2), Float64)
@@ -54,6 +54,9 @@ using District, Scenarios
         @testset "Setpoint" begin
             stp = NightSetPoint(ts)
             @test isa(stp, District.AbstractSetPoint)
+        end
+        @testset "Billing" begin
+            bill = District.Billing()
         end
     end
 

@@ -78,44 +78,21 @@ end
 # COST DEFINITION
 ################################################################################
 function objective(house::House)
-    if hasdevice(house, R6C2)
-        return _objectivethermal(house)
-    else
-        return _objectiveelec(house)
-    end
-end
-
-# TODO: clean objective dispatch
-# FIXME: must be run after buildload
-function _objectiveprice(house::House)
-    p_elec = loadprice(EDFPrice(), ts)
-    p_inj = loadprice(EDFInjection(), ts)
+    bill = house.billing
 
     function costm(m, t, x, u, w)
         zel1 = @JuMP.variable(m, lowerbound=0)
-        @constraint(m, zel1 >= p_elec[t] * elecload(t, x, u, w))
-        @constraint(m, zel1 >= - p_inj * elecload(t, x, u, w))
+        if ~isa(bill.elec, NoneElecPrice)
+            @constraint(m, zel1 >= bill.elec(t) * elecload(t, x, u, w))
+        end
+        if ~isa(bill.injection, NoneElecPrice)
+            @constraint(m, zel1 >= - bill.injection(t) * elecload(t, x, u, w))
+        end
 
-        return JuMP.AffExpr(zel1)
-    end
-    return costm
-end
-
-function _objectivethermal(house::House)
-    p_elec = loadprice(EDFPrice(), house.time)
-    p_therm = loadsetpoint(NightSetPoint(), house.time)
-    p_inj = loadprice(EDFInjection(), house.time)
-    p_th = loadprice(Comfort(), house.time)
-
-
-    function costm(m, t, x, u, w)
-        zel1 = @JuMP.variable(m, lowerbound=0)
-        @constraint(m, zel1 >= p_elec[t] * elecload(t, x, u, w))
-        @constraint(m, zel1 >= - p_inj * elecload(t, x, u, w))
-
-        # TODO: handle HVAC
         zth1 = @JuMP.variable(m, lowerbound=0)
-        @constraint(m, zth1 >= -p_th*(x[4] - p_therm[t] + 1))
+        if ~isa(bill.comfort, NoneComfort)
+            @constraint(m, zth1 >= -bill.comfort(t)*(x[4] - setpoint(bill.comfort, t) + 1))
+        end
 
         return JuMP.AffExpr(zel1 + zth1)
     end
@@ -212,7 +189,6 @@ function builddynamic(house::House)
         end
     end
 
-    println(exdyn)
     @eval dynam(t, x, u, w) = $exdyn
     return dynam
 end
@@ -255,18 +231,15 @@ end
 # TODO: clean definition of real cost
 """Get real cost for simulation."""
 function getrealcost(house::House)
+    bill = house.billing
 
-    pel = loadprice(EDFPrice(), house.time)
-    Tcons = loadsetpoint(NightSetPoint(), house.time)
-    pin = loadprice(EDFInjection(), house.time)
-    pth = loadprice(Comfort(), house.time)
 
     function real_cost(t, x, u, w)
         flow  = elecload(t, x, u, w)
-        pelec = pel[t]*max(0, flow)
+        pelec = bill.elec(t)*max(0, flow)
 
-        temp  = -x[4] + Tcons[t] - 1
-        pconfort = pth * max(0, temp)
+        temp  = -x[4] + setpoint(bill.comfort, t) - 1
+        pconfort = bill.comfort(t) * max(0, temp)
 
         return pelec + pconfort
     end

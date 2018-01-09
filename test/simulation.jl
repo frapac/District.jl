@@ -25,6 +25,9 @@ function buildhouse()
     wdem = Demands(10, 1)
     add!(house, wdem)
 
+    set!(house, EDFPrice(ts))
+    set!(house, ComfortPrice(ts))
+
     dynam = District.builddynamic(house)
     load = District.buildload(house)
 
