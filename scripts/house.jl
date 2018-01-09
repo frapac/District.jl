@@ -7,40 +7,53 @@ ALGO = "MPC"
 
 # Build problem
 ts = TimeSpan(200, 3)
+
+################################################################################
+# BUILDING MODEL
+# initiate building
 house = House(ts)
 
 # Add devices
-b = Battery("bat0")
-add!(house, b)
+devices = [Battery, ElecHotWaterTank, R6C2, ElecHeater]
+names = ["bat0", "ehwt0", "rt1988", 6.]
+for (Device, name) in zip(devices, names)
+    add!(house, Device(name))
+end
 
-hwt = ElecHotWaterTank("ehwt0")
-add!(house, hwt)
-
-thm = R6C2("rt1988")
-add!(house, thm)
-
-heat = ElecHeater(6.)
-add!(house, heat)
-
+# link heater to thermal envelope
 District.link!(house, thm, heat)
 
 # Add noises
+# import demands
 wdem = Demands(10, 1)
 add!(house, wdem)
+# import pv production
 wpv = PVProduction(1, .15, 20, 0)
 add!(house, wpv)
 
+# link hot water tank with hot water demand
 District.link!(house, hwt, wdem)
+
+# build objective: we penalize elec and thermal comfort.
+set!(house, EDFPrice(ts))
+set!(house, ComfortPrice(ts))
+
 
 dynam = District.builddynamic(house)
 load = District.buildload(house)
 
+# initial position
 x0 = [.55, 2., 16., 16.]
+# build SP model
 District.build!(house, x0)
 
 
+
+################################################################################
+# SIMULATION
 # Build simulator
-sim = Simulator(house, 10)
+nscen = 10
+sim = Simulator(house, nscen)
 
 # Build policy
 if ALGO == "MPC"
