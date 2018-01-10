@@ -24,7 +24,7 @@ struct TimeSpan <: AbstractTimeSpan
 end
 TimeSpan(day::Int, ndays::Int) = TimeSpan(day, ndays, .25, Int(24 / .25))
 
-"Get starting and final timesteps of Timespan `ts`."""
+"Get starting and final timesteps of Timespan `ts`."
 unravel(ts::TimeSpan) = (ts.day * ts.nt + 1, ts.day * ts.nt + ts.ndays*ts.nt)
 
 "Get number of timesteps in TimeSpan `ts`."

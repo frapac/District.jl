@@ -12,6 +12,7 @@
 
 export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTank,
        ThermalHeater
+export GraphConnection
 
 abstract type AbstractDevice <: AbstractModel end
 

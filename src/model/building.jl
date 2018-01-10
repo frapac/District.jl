@@ -79,9 +79,16 @@ function build!(house::House, x0::Vector{Float64})
                                                   Vfinal=fcost)
 
     set_state_bounds(spmodel, xb)
+
     house.model = spmodel
 end
 
+
+function updatemodel!(spmodel, conn::AbstractInterface)
+    for t in spmodel.ntim
+        updpb!(spmodel.solverInterface[t], conn, t, 1)
+    end
+end
 
 # temp
 function tonoiselaws(laws::WhiteNoise)
