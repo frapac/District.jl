@@ -4,6 +4,7 @@
 # Define whole microgrid with different interconnected noces.
 ################################################################################
 
+# TODO: interface properly with LightGraphs
 # Grid is the metastructure storing all interconnected elements in the grid
 struct Grid
     name::Symbol

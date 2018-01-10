@@ -8,7 +8,7 @@
 ################################################################################
 # TODO: add generic methods for AbstractBuilding
 
-export House, add!, set!, link!
+export House, add!, set!, link!, swap!
 export nstocks, nnoises
 
 # GENERIC TYPES
@@ -32,12 +32,14 @@ mutable struct House <: AbstractBuilding
     noises::Vector{AbstractUncertainty}
     # House's prices
     billing::AbstractBilling
+    # Inteface with graph
+    conn::AbstractInterface
     # SP model
     model
 end
 
 House(ts::AbstractTimeSpan) = House(gensym(), ts, AbstractDevice[],
-                                    AbstractUncertainty[], Billing(), nothing)
+                                    AbstractUncertainty[], Billing(), NoneInterface(), nothing)
 add!(h::House, dev::AbstractDevice) = push!(h.devices, dev)
 add!(h::House, w::AbstractUncertainty) = push!(h.noises, w)
 set!(h::House, p::AbstractPrice) = set!(h.billing, p)
@@ -208,6 +210,7 @@ end
 # LOAD DEFINITION
 ################################################################################
 # TODO: build load on the fly
+# TODO: clean hygiene of generated function
 function buildload(house::House)
     ntime = ntimesteps(house.time)
 
@@ -308,3 +311,15 @@ hasdevice(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
 
 "Speficy whether `house` has noise with type `dev`."
 hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
+
+
+################################################################################
+# DECOMPOSITION
+################################################################################
+# TODO: here, setting Interface MUST happened just before building model
+function set!(house::House, conn::PriceInterface)
+    house.conn = conn
+    add!(house, conn.linker)
+end
+
+swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)

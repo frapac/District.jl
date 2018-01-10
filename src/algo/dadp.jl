@@ -94,7 +94,6 @@ function psolve!(dec::Decomposition, nodes::Vector{Node})
     for node in nodes
         solve!(dec, node)
     end
-
 end
 
 

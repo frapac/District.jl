@@ -54,6 +54,14 @@ end
 EPEXPrice(ts::AbstractTimeSpan) = EPEXPrice(loaddata(ts, 16))
 (p::EPEXPrice)(t::Int) = p.price[t]
 
+# Recourse price for decomposition
+struct RecoursePrice <: AbstractElecPrice
+    price::Float64
+end
+# TODO:dry
+RecoursePrice(ts::AbstractTimeSpan) = RecoursePrice(1000.)
+(p::RecoursePrice)(t::Int) = p.price
+
 
 ################################################################################
 # Injection price

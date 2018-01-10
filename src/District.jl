@@ -33,6 +33,10 @@ include("model/uncertainties.jl")
 include("model/devices.jl")
 # Compute irradiance
 include("model/irradiation.jl")
+##########
+# NODES & NETWORK
+# interface between building and rest of the graph
+include("model/interface.jl")
 # Buildings definition
 include("model/building.jl")
 # Network definition

@@ -60,6 +60,13 @@ using District, Scenarios
         end
     end
 
+    @testset "Interface" begin
+        v = zeros(10, 2)
+        for Interface in [PriceInterface, FlowInterface]
+            conn = Interface(v)
+            @test isa(conn, District.AbstractInterface)
+        end
+    end
 
     @testset "Uncertainties" begin
         ts = TimeSpan(0, 1)

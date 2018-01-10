@@ -73,7 +73,8 @@ function isstock end
 # Generic implementation
 isstock(dev::AbstractDevice) = nstates(dev) > 0
 
-# by default, thermal and gas load are set to 0
+# by default, elec, thermal and gas load are set to 0
+elecload(d::AbstractDevice, uindex::Int) = :(0.)
 thermalload(d::AbstractDevice, uindex::Int) = :(0.)
 gasload(d::AbstractDevice, uindex::Int) = :(0.)
 
@@ -108,7 +109,7 @@ function parsedevice(bat::Battery, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     return dyn
 end
 
-elecload(bat::Battery, uindex) = :(u[$uindex] - u[$(uindex+1)])
+elecload(bat::Battery, uindex::Int) = :(u[$uindex] - u[$(uindex+1)])
 nstates(bat::Battery) = 1
 ncontrols(bat::Battery) = 2
 xbounds(bat::Battery) = Tuple{Float64, Float64}[(bat.binf, bat.bup)]
@@ -205,8 +206,6 @@ function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt, p::
     return dyn
 end
 
-elecload(hwt::ThermalHotWaterTank, uindex::Int) = :(0.)
-thermalload(hwt::ThermalHotWaterTank, uindex::Int) = :(0.)
 
 nstates(hwt::ThermalHotWaterTank) = 1
 ncontrols(hwt::ThermalHotWaterTank) = 0
@@ -327,7 +326,6 @@ function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     return dyn
 end
 
-elecload(thm::R6C2, uindex::Int) = :(0.)
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 0
 xbounds(thm::R6C2) = Tuple{Float64, Float64}[(-50., 100.), (-50., 100.)]
@@ -393,7 +391,6 @@ struct ThermalHeater <: AbstractHeater
     maxheating::Float64
 end
 parsedevice(h::ThermalHeater, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
-elecload(h::ThermalHeater, uindex::Int) = :(0.)
 thermalload(h::ThermalHeater, uindex::Int) = :(u[$uindex])
 nstates(h::ThermalHeater) = 0
 ncontrols(h::ThermalHeater) = 1
@@ -401,20 +398,20 @@ xbounds(h::ThermalHeater) = Tuple{Float64, Float64}[]
 ubounds(h::ThermalHeater) = [(0., h.maxheating)]
 
 
-
 ################################################################################
-# Bus
-# TODO: does not inherit from AbstractDevice
-struct Connection <: AbstractDevice
-    name::String
-    kva::Float64
+# Connection
+abstract type AbstractConnection <: AbstractDevice end
+struct GraphConnection <: AbstractConnection
+    minkva::Float64
+    maxkva::Float64
 end
-Connection(kva) = Connection(gensym(), kva)
+# By default, Node is prosumer
+GraphConnection(kva::Float64) = GraphConnection(-kva, kva)
 
-parsedevice(conn::Connection, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+parsedevice(conn::GraphConnection, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
 
-elecload(conn::Connection, uindex::Int) = :(0.)
-nstates(conn::Connection) = 0
-ncontrols(conn::Connection) = 1
-xbounds(conn::Connection) = Tuple{Float64, Float64}[]
-ubounds(conn::Connection) = Tuple{Float64, Float64}[(-conn.kva, conn.kva)]
+elecload(conn::GraphConnection, uindex::Int) = :(-u[$uindex])
+nstates(conn::GraphConnection) = 0
+ncontrols(conn::GraphConnection) = 1
+xbounds(conn::GraphConnection) = Tuple{Float64, Float64}[]
+ubounds(conn::GraphConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
