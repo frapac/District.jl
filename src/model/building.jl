@@ -32,6 +32,10 @@ mutable struct House <: AbstractBuilding
     noises::Vector{AbstractUncertainty}
     # House's prices
     billing::AbstractBilling
+    # electricity load
+    elecload::Function
+    # gas load
+    gasload::Function
     # Inteface with graph
     conn::AbstractInterface
     # SP model
@@ -39,7 +43,10 @@ mutable struct House <: AbstractBuilding
 end
 
 House(ts::AbstractTimeSpan) = House(gensym(), ts, AbstractDevice[],
-                                    AbstractUncertainty[], Billing(), NoneInterface(), nothing)
+                                    AbstractUncertainty[], Billing(),
+                                    (t, x, u, w) -> 0.,
+                                    (t, x, u, w) -> 0.,
+                                    NoneInterface(), nothing)
 add!(h::House, dev::AbstractDevice) = push!(h.devices, dev)
 add!(h::House, w::AbstractUncertainty) = push!(h.noises, w)
 set!(h::House, p::AbstractPrice) = set!(h.billing, p)
@@ -50,6 +57,7 @@ nnoises(h::House) = sum(nnoise.(h.noises))
 
 
 function build!(house::House, x0::Vector{Float64})
+    buildload!(house)
     ntime = ntimesteps(house.time)
     xb = xbounds(house)
     ub = ubounds(house)
@@ -60,6 +68,7 @@ function build!(house::House, x0::Vector{Float64})
     costm = objective(house)
     # build final cost
     fcost = final_cost
+    dynam = builddynamic(house)
 
     # build SP model
     spmodel = StochDynamicProgramming.LinearSPModel(ntime, ub,
@@ -89,10 +98,10 @@ function objective(house::House)
     function costm(m, t, x, u, w)
         zel1 = @JuMP.variable(m, lowerbound=0)
         if ~isa(bill.elec, NoneElecPrice)
-            @constraint(m, zel1 >= bill.elec(t) * elecload(t, x, u, w))
+            @constraint(m, zel1 >= bill.elec(t) * house.elecload(t, x, u, w))
         end
         if ~isa(bill.injection, NoneElecPrice)
-            @constraint(m, zel1 >= - bill.injection(t) * elecload(t, x, u, w))
+            @constraint(m, zel1 >= - bill.injection(t) * house.elecload(t, x, u, w))
         end
 
         zth1 = @JuMP.variable(m, lowerbound=0)
@@ -102,7 +111,7 @@ function objective(house::House)
 
         zgas = @JuMP.variable(m, lowerbound=0)
         if ~isa(bill.gas, NoneGasPrice)
-            @constraint(m, zgas >= bill.gas(t)*gasload(t, x, u, w))
+            @constraint(m, zgas >= bill.gas(t)*house.gasload(t, x, u, w))
         end
 
         return JuMP.AffExpr(zel1 + zth1)
@@ -200,8 +209,7 @@ function builddynamic(house::House)
         end
     end
 
-    @eval dynam(t, x, u, w) = $exdyn
-    return dynam
+    return eval(:((t, x, u, w) -> $exdyn))
 end
 
 
@@ -211,7 +219,7 @@ end
 ################################################################################
 # TODO: build load on the fly
 # TODO: clean hygiene of generated function
-function buildload(house::House)
+function buildload!(house::House)
     ntime = ntimesteps(house.time)
 
     # build load corresponding to device
@@ -233,10 +241,8 @@ function buildload(house::House)
         windex += nnoise(ξ)
     end
 
-    println(excost)
-    @eval elecload(t, x, u, w) = $excost
-    @eval gasload(t, x, u, w) = $exgas
-    return elecload
+    house.elecload = eval(:((t, x, u, w) -> $excost))
+    house.gasload = eval(:((t, x, u, w) -> $exgas))
 end
 
 
@@ -251,7 +257,7 @@ function getrealcost(house::House)
 
 
     function real_cost(t, x, u, w)
-        flow  = elecload(t, x, u, w)
+        flow  = house.elecload(t, x, u, w)
         pelec = bill.elec(t)*max(0, flow)
 
         temp  = -x[4] + setpoint(bill.comfort, t) - 1
@@ -320,6 +326,7 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 function set!(house::House, conn::PriceInterface)
     house.conn = conn
     add!(house, conn.linker)
+    # TODO: update model
 end
 
 swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)

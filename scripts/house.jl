@@ -43,8 +43,6 @@ set!(house, EDFPrice(ts))
 set!(house, ComfortPrice(ts))
 
 
-dynam = District.builddynamic(house)
-load = District.buildload(house)
 
 # initial position
 x0 = [.55, 2., 16., 16.]

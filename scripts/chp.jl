@@ -33,10 +33,6 @@ link!(house, hwt, chp)
 wdem = Demands(10, 1)
 add!(house, wdem)
 
-
-dynam = District.builddynamic(house)
-load = District.buildload(house)
-
 set!(house, EDFPrice(ts))
 set!(house, ComfortPrice(ts))
 set!(house, District.EngieGasPrice(ts))

@@ -39,8 +39,6 @@ using District
 
     dynam = District.builddynamic(house)
     @test isa(dynam(1, [4, 0, 0, 0], zeros(10), zeros(3)), Vector{Float64})
-    load = District.buildload(house)
-    @test isa(load(40, [4, 0, 0, 0], zeros(10), zeros(3)), Float64)
 
     xb = District.xbounds(house)
     @test length(xb) == nstocks(house)

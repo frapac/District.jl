@@ -7,7 +7,6 @@
 # Buildings
 - check initial state
 - clean definition of real cost
-- clean definition of prices
 - clean definition of final cost
 
 # Uncertainties
@@ -20,3 +19,4 @@
 
 # Decomposition
 - add working price decomposition
+- ensure that simulation is done always on same set of scenarios
