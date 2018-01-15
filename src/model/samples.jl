@@ -8,6 +8,7 @@
 
 abstract type AbstractProfile end
 
+export ElecHouse, CHPHouse
 import JLD: load
 
 
@@ -55,7 +56,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
     add!(house, heat)
 
     # link heater to thermal envelope
-    District.link!(house, thm, heat)
+    link!(house, thm, heat)
 
     # import demands
     wdem = Demands(10, prof.idhouse)
@@ -68,7 +69,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
     end
 
     # link hot water tank with hot water demand
-    District.link!(house, hwt, wdem)
+    link!(house, hwt, wdem)
 
     # build objective: we penalize elec and thermal comfort.
     set!(house, EDFPrice(ts))
@@ -77,3 +78,53 @@ function load(ts::TimeSpan, prof::ElecHouse)
     return house
 end
 
+################################################################################
+# CHP house
+struct CHPHouse <: AbstractProfile
+    chp::String
+    # Heater [kW]
+    heater::Float64
+    # Battery profile
+    bat::String
+    # Thermal profile
+    env::String
+    # Demand profile
+    idhouse::Int
+end
+CHPHouse(;chp="chp0", heat=6., bat="", env="rt1988", idhouse=1) = CHPHouse(chp, heat, bat, env, idhouse)
+
+
+function load(ts::TimeSpan, prof::CHPHouse)
+    house = House(ts)
+
+    chp = MicroCHP(prof.chp)
+    add!(house, chp)
+    # Add battery
+    if prof.bat != ""
+        d = Battery(prof.bat)
+        add!(house, d)
+    end
+
+    hwt = ThermalHotWaterTank("twht0")
+    add!(house, hwt)
+
+    thm = R6C2(prof.env)
+    add!(house, thm)
+
+    heat = ThermalHeater(prof.heater)
+    add!(house, heat)
+
+    link!(house, thm, heat)
+    link!(house, hwt, heat)
+    link!(house, hwt, chp)
+
+    # import demands
+    wdem = Demands(10, prof.idhouse)
+    add!(house, wdem)
+
+    set!(house, EDFPrice(ts))
+    set!(house, ComfortPrice(ts))
+    set!(house, District.EngieGasPrice(ts))
+
+    return house
+end
