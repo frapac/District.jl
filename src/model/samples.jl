@@ -8,7 +8,7 @@
 
 abstract type AbstractProfile end
 
-export ElecHouse, CHPHouse
+export ElecHouse, CHPHouse, load
 import JLD: load
 
 

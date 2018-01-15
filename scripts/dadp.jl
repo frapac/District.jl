@@ -5,10 +5,9 @@ push!(LOAD_PATH, "..")
 using District, StochDynamicProgramming
 using Lbfgsb
 
-include("utils.jl")
 
 struct Grid
-    ntime
+    ntime::Int
     nodes::Vector{District.AbstractNode}
 end
 
@@ -84,11 +83,15 @@ function setsubgradient!(storage, dadp)
     storage[:] = dadp.F[1, :] + dadp.F[2, :]
 end
 
-∇g(dadp) = (A*(dadp.F[1, :] + dadp.F[2, :])')'[:]
+function ∇g(dadp::DADP)
+    q = dadp.F[1, :] + dadp.F[2, :]
+    return [q; -q]
+end
 
 
 function oracle(pb::Grid, dadp::DADP)
-    f(λ) = dadp.cost
+    # take care: we aim at find a maximum (min f = - max -f )
+    f(λ) = - dadp.cost
 
     function grad!(λ, storage)
         # update multiplier
@@ -96,7 +99,7 @@ function oracle(pb::Grid, dadp::DADP)
         solve!(pb, dadp)
         simulate!(pb, dadp)
 
-        copy!(storage, ∇g(dadp))
+        copy!(storage, -∇g(dadp))
     end
 
     return f, grad!
@@ -106,18 +109,17 @@ end
 ts = TimeSpan(200, 1)
 
 # we build two houses
-h1 = buildelechouse(ts)
-h2 = buildelechouse(ts)
+h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0"))
+h2 = load(ts, ElecHouse(pv=0, heat=6, bat="bat0", idhouse=2))
 
 pb = Grid(District.ntimesteps(ts), [h1, h2])
 build!(pb)
-algo = DADP(pb)
+algo = DADP(pb, nsimu=200)
 solve!(pb, algo)
 
 
 f, grad! = oracle(pb, algo)
 
 # Launch Gradient Descent!
-    #= return @time Optim.optimize(f, grad!, x0, dadp.algo, options) =#
 x0 = zeros(Float64, 190)
 @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-8)
