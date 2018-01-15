@@ -79,6 +79,7 @@ function build!(house::House, x0::Vector{Float64})
                                                   Vfinal=fcost)
 
     set_state_bounds(spmodel, xb)
+    # TODO: update model with connection
 
     house.model = spmodel
 end
@@ -103,25 +104,32 @@ function objective(house::House)
     bill = house.billing
 
     function costm(m, t, x, u, w)
-        zel1 = @JuMP.variable(m, lowerbound=0)
+        vals = JuMP.Variable[]
+        # add elec price
         if ~isa(bill.elec, NoneElecPrice)
+            zel1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zel1 >= bill.elec(t) * house.elecload(t, x, u, w))
-        end
-        if ~isa(bill.injection, NoneElecPrice)
-            @constraint(m, zel1 >= - bill.injection(t) * house.elecload(t, x, u, w))
+            push!(vals, zel1)
+            # add  injection price
+            if ~isa(bill.injection, NoneElecPrice)
+                @constraint(m, zel1 >= - bill.injection(t) * house.elecload(t, x, u, w))
+            end
         end
 
-        zth1 = @JuMP.variable(m, lowerbound=0)
         if ~isa(bill.comfort, NoneComfort)
+            zth1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zth1 >= -bill.comfort(t)*(x[4] - setpoint(bill.comfort, t) + 1))
+            push!(vals, zth1)
         end
 
-        zgas = @JuMP.variable(m, lowerbound=0)
         if ~isa(bill.gas, NoneGasPrice)
+            zgas = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zgas >= bill.gas(t)*house.gasload(t, x, u, w))
+            push!(vals, zgas)
         end
 
-        return JuMP.AffExpr(zel1 + zth1)
+        coefs = ones(Float64, length(vals))
+        return JuMP.AffExpr(vals, coefs, 0.0)
     end
     return costm
 end
