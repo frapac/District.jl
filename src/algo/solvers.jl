@@ -6,6 +6,19 @@
 ################################################################################
 # TODO: clean SDDP solver
 
+export solve
+abstract type AbstractSolver end
+
+
+"""
+    solve(model::AbstractNode, solver::AbstractSolver)
+
+Solve problem specified in `model` with SP solver `solver`.
+"""
+function solve end
+
+
+# UTILS
 # Specify your solver:
 using Gurobi
 #= using Clp =#

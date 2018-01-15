@@ -8,7 +8,6 @@
 
 export SDDP
 
-abstract type AbstractSolver end
 
 # TODO: improve description of SDDP
 immutable SDDP <: AbstractSolver
