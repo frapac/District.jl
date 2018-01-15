@@ -5,50 +5,19 @@ using District, StochDynamicProgramming
 
 ALGO = "MPC"
 
-# Build problem
+# load time span
 ts = TimeSpan(200, 3)
 
 ################################################################################
 # BUILDING MODEL
 # initiate building
-house = House(ts)
-
-# Add devices
-devices = [Battery, ElecHotWaterTank, R6C2, ElecHeater]
-names = ["bat0", "ehwt0", "rt1988", 6.]
-dev = []
-for (Device, name) in zip(devices, names)
-    d = Device(name)
-    add!(house, d)
-    push!(dev, d)
-end
-bat, hwt, thm, heat = dev
-
-# link heater to thermal envelope
-District.link!(house, thm, heat)
-
-# Add noises
-# import demands
-wdem = Demands(10, 1)
-add!(house, wdem)
-# import pv production
-wpv = PVProduction(1, .15, 20, 0)
-add!(house, wpv)
-
-# link hot water tank with hot water demand
-District.link!(house, hwt, wdem)
-
-# build objective: we penalize elec and thermal comfort.
-set!(house, EDFPrice(ts))
-set!(house, ComfortPrice(ts))
-
-
+prof = District.ElecHouse(pv=20, heat=6, bat="bat0")
+house = District.load(ts, prof)
 
 # initial position
 x0 = [.55, 2., 16., 16.]
 # build SP model
 District.build!(house, x0)
-
 
 
 ################################################################################

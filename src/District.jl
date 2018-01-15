@@ -39,6 +39,8 @@ include("model/irradiation.jl")
 include("model/interface.jl")
 # Buildings definition
 include("model/building.jl")
+# Typical profile
+include("model/samples.jl")
 # Network definition
 include("model/network.jl")
 
