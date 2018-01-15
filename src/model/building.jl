@@ -105,36 +105,50 @@ function objective(house::House)
 
     function costm(m, t, x, u, w)
         vals = JuMP.Variable[]
+        coefs = Float64[]
         # add elec price
         if ~isa(bill.elec, NoneElecPrice)
             zel1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zel1 >= bill.elec(t) * house.elecload(t, x, u, w))
             push!(vals, zel1)
+            push!(coefs, 1.0)
             # add  injection price
             if ~isa(bill.injection, NoneElecPrice)
                 @constraint(m, zel1 >= - bill.injection(t) * house.elecload(t, x, u, w))
             end
         end
 
+        # add thermal comfort
         if ~isa(bill.comfort, NoneComfort)
             zth1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zth1 >= -bill.comfort(t)*(x[4] - setpoint(bill.comfort, t) + 1))
             push!(vals, zth1)
+            push!(coefs, 1.0)
         end
 
+        # add gas price
         if ~isa(bill.gas, NoneGasPrice)
             zgas = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zgas >= bill.gas(t)*house.gasload(t, x, u, w))
             push!(vals, zgas)
+            push!(coefs, 1.0)
         end
 
-        coefs = ones(Float64, length(vals))
+        # add decomposition price
+        if ~isa(house.conn, NoneInterface)
+            # add < λ, F >
+            u = m[:u]
+            push!(vals, u[end])
+            push!(coefs, house.conn.price[t])
+        end
+
         return JuMP.AffExpr(vals, coefs, 0.0)
     end
     return costm
 end
 
 
+# TODO: clean definition of final cost
 function final_cost(model, m)
     alpha = m[:alpha]
     #= w = JuMP.getvariable(m, :w) =#

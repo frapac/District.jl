@@ -16,7 +16,7 @@ end
 
 # SOLVER
 function solve(node::AbstractNode, sddp::SDDP)
-    params = District.get_sddp_solver()
-    return solve_SDDP(node.model, params, 1,
-                      stopcrit=District.IterLimit(sddp.nit))
+    params = get_sddp_solver()
+    return solve_SDDP(node.model, params, 0, 0,
+                      stopcrit=IterLimit(sddp.nit))
 end

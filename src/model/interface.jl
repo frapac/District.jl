@@ -19,7 +19,7 @@ struct PriceInterface <: AbstractInterface
     linker::AbstractConnection
 end
 
-swap!(p::PriceInterface, v::Array{Float64}) = p.price = v
+swap!(p::PriceInterface, v::Array{Float64}) = copy!(p.price, v)
 
 
 function updpb!(m::JuMP.Model, p::PriceInterface, t, ny)

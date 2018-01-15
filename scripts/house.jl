@@ -3,7 +3,7 @@ push!(LOAD_PATH, "..")
 
 using District, StochDynamicProgramming
 
-ALGO = "MPC"
+ALGO = "SDDP"
 
 # load time span
 ts = TimeSpan(200, 3)
@@ -31,7 +31,7 @@ if ALGO == "MPC"
     pol = District.MPCPolicy(District.genforecast(ts, house.noises))
 elseif ALGO == "SDDP"
     # Compute cuts :
-    sddp = @time District.solve(house, SDDP(100))
+    sddp = @time District.solve(house, SDDP(10))
     pol = District.HereAndNowDP(sddp.bellmanfunctions)
 end
 
