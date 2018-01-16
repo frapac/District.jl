@@ -119,7 +119,7 @@ function objective(house::House)
         # add thermal comfort
         if ~isa(bill.comfort, NoneComfort)
             # get index of inner temperature
-            itemp = getposition(house, R6C2) + 1
+            itemp = getposition(house, R6C2)
             zth1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zth1 >= -bill.comfort(t)*(x[itemp] - setpoint(bill.comfort, t) + 1))
             push!(vals, zth1)
@@ -277,20 +277,26 @@ end
 ################################################################################
 # SIMULATION DEFINITION
 ################################################################################
-# TODO: clean definition of real cost
+# TODO: fix definition of real cost
 """Get real cost for simulation."""
 function getrealcost(house::House)
     bill = house.billing
 
-
     function real_cost(t, x, u, w)
-        flow  = house.elecload(t, x, u, w)
-        pelec = bill.elec(t)*max(0, flow)
-
-        temp  = -x[4] + setpoint(bill.comfort, t) - 1
-        pconfort = bill.comfort(t) * max(0, temp)
-
-        return pelec + pconfort
+        cost = 0.
+        if ~isa(bill.elec, NoneElecPrice)
+            flow  = house.elecload(t, x, u, w)
+            cost += bill.elec(t)*max(0, flow)
+        end
+        if ~isa(bill.comfort, NoneComfort)
+            itemp = getposition(house, R6C2)
+            temp  = -x[itemp] + setpoint(bill.comfort, t) - 1
+            cost += bill.comfort(t) * max(0, temp)
+        end
+        if ~isa(bill.gas, NoneGasPrice)
+            cost += bill.gas(t)*house.gasload(t, x, u, w)
+        end
+        return cost
     end
 
     return real_cost
@@ -338,7 +344,7 @@ windex(house::House, w::AbstractUncertainty) = cumsum(nnoise.(house.noises))[get
 
 "Return first device with type `dev`."
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]
-getposition(house::House, dev::Type) = findfirst(isa.(house.devices, dev))
+getposition(house::House, dev::Type) = cumsum(nstates.(house.devices))[findfirst(isa.(house.devices, dev))]
 
 "Speficy whether `house` has device with type `dev`."
 hasdevice(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
