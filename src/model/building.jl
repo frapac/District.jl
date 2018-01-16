@@ -79,7 +79,6 @@ function build!(house::House, x0::Vector{Float64})
                                                   Vfinal=fcost)
 
     set_state_bounds(spmodel, xb)
-    # TODO: update model with connection
 
     house.model = spmodel
 end
@@ -99,7 +98,6 @@ end
 ################################################################################
 # COST DEFINITION
 ################################################################################
-# TODO: define more properly AffExpr
 function objective(house::House)
     bill = house.billing
 
@@ -120,8 +118,10 @@ function objective(house::House)
 
         # add thermal comfort
         if ~isa(bill.comfort, NoneComfort)
+            # get index of inner temperature
+            itemp = getposition(house, R6C2) + 1
             zth1 = @JuMP.variable(m, lowerbound=0)
-            @constraint(m, zth1 >= -bill.comfort(t)*(x[4] - setpoint(bill.comfort, t) + 1))
+            @constraint(m, zth1 >= -bill.comfort(t)*(x[itemp] - setpoint(bill.comfort, t) + 1))
             push!(vals, zth1)
             push!(coefs, 1.0)
         end
@@ -246,8 +246,6 @@ end
 ################################################################################
 # LOAD DEFINITION
 ################################################################################
-# TODO: build load on the fly
-# TODO: clean hygiene of generated function
 function buildload!(house::House)
     ntime = ntimesteps(house.time)
 
@@ -340,6 +338,7 @@ windex(house::House, w::AbstractUncertainty) = cumsum(nnoise.(house.noises))[get
 
 "Return first device with type `dev`."
 getdevice(house::House, dev::Type) = house.devices[findfirst(isa.(house.devices, dev))]
+getposition(house::House, dev::Type) = findfirst(isa.(house.devices, dev))
 
 "Speficy whether `house` has device with type `dev`."
 hasdevice(house::House, dev::Type) = findfirst(isa.(house.devices, dev)) >= 1
@@ -355,7 +354,6 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 function set!(house::House, conn::PriceInterface)
     house.conn = conn
     add!(house, conn.linker)
-    # TODO: update model
 end
 
 swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)
