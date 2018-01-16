@@ -1,197 +1,120 @@
+################################################################################
+# District.jl
+################################################################################
+# Implement DADP decomposition solver.
+# Design to solve graph problem, with interconnection balance.
+#  min_{F, Q} J_P(F) + J_T(Q) ,
+#      s.t. A Q + F = 0
+################################################################################
+
+export DADP
 
 import Base: Base.show
 
-using Lbfgsb
 
-################################################################################
-# Implementation of DADP algorithm
-################################################################################
-struct DADP <: AbstractSolver
-    niter::Int
-    algo::Optim.Optimizer
-    approx::Symbol
-    gtol::Float64
+
+# TODO: move params in dedicated structure
+mutable struct DADP <: AbstractSolver
+    # number of timesteps
+    ntime::Int
+    # current dual cost
+    cost::Float64
+    # current flow in nodes
+    F::Array{Float64, 2}
+    # current flow in edges
+    Q::Array{Float64}
+    # solver to solve nodes subproblems
+    algo::AbstractSolver
+    # ???
+    pb
+    # Scenario
+    scen::Array
+    # number of Monte Carlo simulations to estimate gradient
     nsimu::Int
-    warmstart::Bool
+    # maximum number of iterations
+    nit::Int
+    # models stores SDDPInterface in dedicated Dictionnary
+    models::Dict
 end
 
 
-"""DADP algorithm.
-
-We use a solver to perform the gradient descent.
 """
-function optimize!(pb::Grid, dadp::DADPAlgo; verbose=false)
-    # get initial position
-    x0 = init(pb.dec, pb, warmstart=dadp.warmstart)
+    DADP(pb::Grid)
 
-    # build oracle
-    f, grad! = oracle(pb, dadp)
+Build DADP solver.
+"""
+function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+    nnodes = length(pb.nodes)
+    ntime = ntimesteps(pb.nodes[1].time)
 
-    # Configure Gradient Descent
-    options = Optim.Options(g_tol=dadp.gtol, allow_f_increases=true, show_trace=verbose,
-                        iterations=dadp.niter, store_trace=true, extended_trace=true)
+    F = zeros(Float64, nnodes, ntime-1)
+    Q = zeros(Float64, ntime-1, pb.net.narcs)
+    scen = [genscen(d.model, nsimu) for d in pb.nodes]
+    # initiate mod with empty dictionnary
+    mod = Dict()
 
-    # Launch Gradient Descent!
-    try
-        #= return @time Optim.optimize(f, grad!, x0, dadp.algo, options) =#
-        return @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-8)
-    catch ex
-        if isa(ex, InterruptException)
-            warn("Gradient descent interrupted manually")
-            return nothing
-        else
-            rethrow(ex)
-        end
+    DADP(ntime, Inf, F, Q, algo, nothing, scen, nsimu, nit, mod)
+end
+
+# We need three ingredients to build oracle:
+#     i) solve! : once new multipliers are set, resolve nodes and edges
+#                 problems and update value function.
+#     ii) simulate! : once value functions are obtained, simulate
+#                     trajectories via Monte Carlo with relaxed problem.
+#     iii) ∇g : eventually, compute subgradient along previous trajectories.
+
+function solve!(pb::Grid, dadp::DADP)
+    # solve production subproblems
+    for d in pb.nodes
+        dadp.models[d.name] = solve(d, dadp.algo)
+    end
+    # solve transport problem
+    solve!(pb.net)
+end
+
+function simulate!(pb::Grid, dadp::DADP)
+    dadp.cost = 0
+    for (id, d) in enumerate(pb.nodes)
+        c, _, u = StochDynamicProgramming.simulate(dadp.models[d.name], dadp.scen[id])
+        # take average of importation flows for Node `d`
+        dadp.F[id, :] = mean(u[:, :, end], 2)
+        # take average of costs
+        dadp.cost += mean(c)
     end
 
+    # add transportation cost
+    dadp.cost += pb.net.cost
+    # update Q flows inside DADP
+    copy!(dadp.Q, pb.net.Q)
 end
 
+function ∇g(pb::Grid, dadp::DADP)
+    dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
+    for t in 1:(dadp.ntime - 1)
+        f = dadp.F[:, t]
+        q = dadp.Q[t, :]
+        dg[t, :] = (pb.net.A*q + f)[:]
+    end
+    return dg[:]
+end
 
-# Define routine to use Gradient Descent.
-# We use a closure to avoid unecessary operation
-# while computing F after gradient G
+# oracle return a cost function `f` and a gradient function `grad!`
+# corresponding to the transporation problem.
 function oracle(pb::Grid, dadp::DADP)
-    f(λ) = cost(pb)
+    # take care: we aim at find a maximum (min f = - max -f )
+    f(λ) = - dadp.cost
 
     function grad!(λ, storage)
-        # update multiplier
-        mul = reshape(λ, pb.nnodes, pb.ntime-1, pb.ninfo)
+        # update multiplier inside Grid `pb`
+        swap!(pb, λ)
+        # resolve `pb` with these new multipliers
+        solve!(pb, dadp)
+        # simulate trajectories with updated value functions
+        simulate!(pb, dadp)
 
-        setexch!(pb, mul)
-
-        # solve problem and update value functions
-        solve!(pb)
-
-        # Monte-Carlo simulation
-        simulate!(pb, nsimu)
-
-        # determine equilibrium along scenarios
-        setsubgradient!(storage, pb)
+        # Then, compute subgradients!
+        copy!(storage, -∇g(pb, dadp))
     end
 
     return f, grad!
-end
-
-
-################################################################################
-# SOLVER
-################################################################################
-function solve!(pb::Grid)
-    # solve production problem
-    psolve!(pb.dec, pb.nodes)
-    # solve transport problem
-    tsolve!(pb.dec, pb.network)
-end
-
-
-"""Solve transport problem."""
-tsolve!(::PriceDecomposition, network::Network)=prsolve!(network)
-tsolve!(::QuantDecomposition, network::Network)=qsolve!(network)
-
-"""Solve production problem."""
-function psolve!(dec::Decomposition, nodes::Vector{Node})
-    #TODO: can be parallelized
-    for node in nodes
-        solve!(dec, node)
-    end
-end
-
-
-################################################################################
-# SIMULATION
-################################################################################
-function simulate!(pb::Grid, nsimu::Int)
-    # TODO: parallelize simulation
-    for node in pb.nodes
-        seed = -1 #rand(1:1000)
-        simnode!(pb.dec, node, nsimu, seed)
-    end
-end
-
-function psimnode!(dec, node, nsimu)
-    nt = Threads.nthreads()
-    nsimu_th = div(nsimu, nt)
-
-    cost = zeros(Float64, nt)
-    F = zeros(Float64, size(node.flow)..., nt)
-    Threads.@threads for i in 1:nt
-        simd = simulate_uzawa(node, nsimu_th, PriceDecomposition(), seed)
-        cost[i] = -mean(simd[1])
-        F[:, :, i] = mean(simd[2], 2)
-    end
-
-    node.dualcost = mean(cost)
-    # update flow inside node
-    # TODO: mem alloc
-    node.flow = mean(F, 3)[:, :, 1]
-end
-
-"""Simulate node in dual."""
-function simnode!(::PriceDecomposition, node, nsimu, seed=-1)
-    # perform simulation in dual
-    simd = simulate_uzawa(node, nsimu, PriceDecomposition())
-    # update dual cost
-    node.dualcost = -mean(simd[1])
-    # update flow inside node
-    # TODO: mem alloc
-    node.flow = mean(simd[2], 2)
-end
-"""Simulate node in primal."""
-function simnode!(::QuantDecomposition, node, nsimu)
-    # perform simulation in dual
-    simd = simulate_uzawa(node, nsimu, QuantDecomposition())
-    # update dual cost
-    node.primalcost = mean(simd[1])
-    # update flow inside node
-    # TODO: mem alloc
-    node.λ = mean(simd[2], 2)
-end
-
-
-"""Simulate global problem."""
-function primalcost(pb::Grid, nsimu::Int=1000)
-    return mean(simup(pb, nsimu)[1])
-end
-"""Monte-carlo simulation in primal."""
-function simup(pb::Grid, nsimu::Int)
-    # generate sample of scenarios
-    al = StochDynamicProgramming.simulate_scenarios(pb.model.noises, nsimu)
-    x0 = [n.x0[1] for n in pb.nodes]
-    # simulate primal model
-    return MPTS.simulate_primal(pb.model, pb.Δx, [n.V for n in pb.nodes], x0, al)
-end
-
-
-################################################################################
-# SUBGRADIENT
-################################################################################
-# set multiple dispatch:
-setsubgradient!(oracle, pb::Grid) = _setsubgradient!(oracle, pb, pb.dec)
-_setsubgradient!(oracle, pb::Grid, ::PriceDecomposition) = equiflow!(oracle, pb)
-_setsubgradient!(oracle, pb::Grid, ::QuantDecomposition) = equiprice!(oracle, pb)
-
-
-################################################################################
-# COST
-################################################################################
-cost(pb::Grid) = _cost(pb.dec, pb)
-_cost(::PriceDecomposition, pb::Grid) = dualcost(pb)
-_cost(::QuantDecomposition, pb::Grid) = primcost(pb)
-
-
-"""Get evolution of primal cost through iterations."""
-function getprimal(pb, trace, nsimu)
-    primal = []
-    dec = MPTS.PriceDecomposition()
-
-    for t in 1:endof(trace)
-        _mul = trace[t].metadata["x"]
-        mul = reshape(_mul, pb.nnodes, pb.ntime-1, pb.ninfo)
-        MPTS.setexch!(pb, mul)
-
-        MPTS.psolve!(dec, pb.nodes)
-        prim = MPTS.primalcost(pb, nsimu)
-        push!(primal, prim)
-    end
-    primal
 end

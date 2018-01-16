@@ -47,8 +47,12 @@ include("model/network.jl")
 ##########
 # ALGO
 include("algo/solvers.jl")
+# flow solver for graphs
+include("algo/flow.jl")
 # sddp solver
 include("algo/sddp.jl")
+# dadp solver
+include("algo/dadp.jl")
 
 ##########
 # SIMULATION
