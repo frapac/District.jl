@@ -10,7 +10,7 @@
 ################################################################################
 
 ################################################################################
-export EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice
+export EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice, RecoursePrice
 export NightSetPoint
 
 # Definition of prices

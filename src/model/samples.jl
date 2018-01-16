@@ -33,8 +33,10 @@ struct ElecHouse <: AbstractProfile
     env::String
     # Demand profile
     idhouse::Int
+    # Quantization
+    nbinsdem::Int
 end
-ElecHouse(;pv=0, heat=3, bat="", env="rt2012", idhouse=1) = ElecHouse(pv, heat, bat, env, idhouse)
+ElecHouse(;pv=0, heat=3, bat="", env="rt2012", idhouse=1, nbins=10) = ElecHouse(pv, heat, bat, env, idhouse, nbins)
 
 
 function load(ts::TimeSpan, prof::ElecHouse)
@@ -59,7 +61,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
     link!(house, thm, heat)
 
     # import demands
-    wdem = Demands(10, prof.idhouse)
+    wdem = Demands(prof.nbinsdem, prof.idhouse)
     add!(house, wdem)
 
     # import pv production
@@ -73,7 +75,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
 
     # build objective: we penalize elec and thermal comfort.
     set!(house, EDFPrice(ts))
-    set!(house, ComfortPrice(ts))
+    #= set!(house, ComfortPrice(ts)) =#
 
     return house
 end
