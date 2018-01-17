@@ -21,7 +21,8 @@ abstract type AbstractElecPrice <: AbstractPrice end
 abstract type AbstractGasPrice <: AbstractPrice end
 abstract type AbstractComfortPrice <: AbstractPrice end
 
-
+abstract type AbstractFinalCost end
+abstract type AbstractPenalization end
 
 
 ################################################################################
@@ -137,3 +138,29 @@ set!(bill::Billing, p::AbstractElecPrice) = bill.elec = p
 set!(bill::Billing, p::AbstractComfortPrice) = bill.comfort = p
 set!(bill::Billing, p::AbstractGasPrice) = bill.gas = p
 set!(bill::Billing, p::EDFInjection) = bill.injection = p
+
+
+################################################################################
+# Final penalization
+# Implementation of function K
+struct PiecewiseLinearCost <: AbstractPenalization
+    threshold::Float64
+    penalization::Float64
+end
+(p::PiecewiseLinearCost)(x::Float64) = p.penalization*max(0, p.threshold - x)
+(p::PiecewiseLinearCost)(x::JuMP.Variable) = p.penalization*(p.threshold - x)
+
+
+struct QuadraticCost <: AbstractPenalization
+    center::Float64
+    penalization::Float64
+end
+(p::QuadraticCost)(x::T) where {T<:Union{Float64, JuMP.Variable}} = p.penalization*(p.threshold - x)^2
+
+
+#= struct FinalCost <: AbstractFinalCost =#
+#=     devices::Vector{AbstractDevice} =#
+#=     penals::Vector{AbstractPenalization} =#
+#= end =#
+#= FinalCost() = FinalCost([], []) =#
+#= #1= (p::FinalCost)(x::Real) = sum.(p =1# =#

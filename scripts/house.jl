@@ -3,6 +3,8 @@ push!(LOAD_PATH, "..")
 
 using District, StochDynamicProgramming
 
+srand(10)
+
 ALGO = "SDDP"
 
 # load time span

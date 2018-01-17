@@ -40,6 +40,8 @@ struct Simulator
     realfinalcost::Function
 end
 
+
+# TODO: currently dynamics is the same as in optimization model
 """
     Simulator(n::AbstractNode, nassess::Int)
 

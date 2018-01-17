@@ -67,7 +67,7 @@ function build!(house::House, x0::Vector{Float64})
     # build objective function
     costm = objective(house)
     # build final cost
-    fcost = final_cost
+    fcost = buildfcost(house)
     dynam = builddynamic(house)
 
     # build SP model
@@ -83,12 +83,6 @@ function build!(house::House, x0::Vector{Float64})
     house.model = spmodel
 end
 
-
-function updatemodel!(spmodel, conn::AbstractInterface)
-    for t in spmodel.ntim
-        updpb!(spmodel.solverInterface[t], conn, t, 1)
-    end
-end
 
 # temp
 function tonoiselaws(laws::WhiteNoise)
@@ -149,19 +143,29 @@ end
 
 
 # TODO: clean definition of final cost
-function final_cost(model, m)
-    alpha = m[:alpha]
-    #= w = JuMP.getvariable(m, :w) =#
-    x = m[:x]
-    u = m[:u]
-    xf = m[:xf]
-    @variable(m, cost)
-    z1 = @JuMP.variable(m, lowerbound=0)
-    @JuMP.constraint(m, z1 >= 2. - xf[2])
-    @JuMP.constraint(m, alpha == PENAL_TANK*z1)
+function buildfcost(house::House)
+    #= fcost = house.billing.finalcost =#
+    function final_cost(model, m)
+        alpha = m[:alpha]
+        #= w = JuMP.getvariable(m, :w) =#
+        x = m[:x]
+        u = m[:u]
+        xf = m[:xf]
+        z1 = @JuMP.variable(m, lowerbound=0)
+        @JuMP.constraint(m, z1 >= PENAL_TANK * (2. - xf[2]))
+
+        #= z1 = @JuMP.variable(m, [1:length(fcost)], lowerbound=0) =#
+        #= for id in 1:length(fcost) =#
+        #=     idx = getposition(house, f) =#
+        #=     @JuMP.constraint(m, z1[id] >= fcost.penals[id](xf[idx])) =#
+        #= end =#
+        @JuMP.constraint(m, alpha == sum(z1))
+    end
+    return final_cost
 end
 
 
+# TODO: add DH final cost
 function final_cost_dh(model, m)
     alpha = m[:alpha]
     # get number of random noises
@@ -277,7 +281,6 @@ end
 ################################################################################
 # SIMULATION DEFINITION
 ################################################################################
-# TODO: fix definition of real cost
 """Get real cost for simulation."""
 function getrealcost(house::House)
     bill = house.billing
