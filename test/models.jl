@@ -16,7 +16,6 @@ using District, Scenarios
         @test size(d) == (35037, 16)
     end
 
-
     @testset "Utils" begin
         @testset "TimeSpan" begin
             ts = TimeSpan(1, 7)
@@ -27,7 +26,6 @@ using District, Scenarios
             @test isa(District.weekcycle(ts), Vector{Int64})
         end
     end
-
 
     @testset "Data" begin
         ts = TimeSpan(0, 1)
@@ -41,11 +39,12 @@ using District, Scenarios
         end
     end
 
-
     @testset "Price" begin
         ts = TimeSpan(0, 1)
         @testset "Price" begin
-            for Tariff in [EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice]
+            Prices = [EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice,
+                      RecoursePrice, EDFInjection]
+            for Tariff in Prices
                 price = Tariff(ts)
                 @test isa(price, District.AbstractPrice)
                 @test isa(price(2), Float64)
@@ -56,10 +55,14 @@ using District, Scenarios
             @test isa(stp, District.AbstractSetPoint)
         end
         @testset "Billing" begin
-            bill = District.Billing()
+            bill = Billing()
+            @test isa(bill, Billing)
+            # test price loader
+            set!(bill, EDFPrice(ts))
+            set!(bill, EngieGasPrice(ts))
+            set!(bill, EDFInjection(ts))
         end
     end
-
 
     @testset "Uncertainties" begin
         ts = TimeSpan(0, 1)
@@ -95,11 +98,17 @@ using District, Scenarios
         end
     end
 
-
-    devices = [Battery, ElecHotWaterTank, ThermalHotWaterTank, R6C2, R6C2, MicroCHP,
-               ElecHeater, ThermalHeater]
-    initid = ["bat0", "ehwt0", "twht0", "rt1988", "rt2012", "chp0", 6., 6.]
     @testset "Devices" begin
+        # build params Dict to load devices
+        params = Dict()
+        params["text"] = zeros(Float64, 96)
+        params["pint"] = zeros(Float64, 96)
+        params["pext"] = zeros(Float64, 96)
+        # add devices list
+        devices = [Battery, ElecHotWaterTank, ThermalHotWaterTank, R6C2, R6C2, MicroCHP,
+                ElecHeater, ThermalHeater, GraphConnection]
+        initid = ["bat0", "ehwt0", "twht0", "rt1988", "rt2012", "chp0", 6., 6., 6.]
+        # test devices
         for (Stock, ids) in zip(devices, initid)
             st = Stock(ids)
             @test isa(st, Stock)
@@ -110,9 +119,24 @@ using District, Scenarios
             @test isa(District.ubounds(st), Vector{Tuple{Float64, Float64}})
             @test length(District.xbounds(st)) == District.nstates(st)
             @test length(District.ubounds(st)) == District.ncontrols(st)
+            ex = District.parsedevice(st, 1, 1, .25, params)
+            @test isa(ex, Vector{Expr})
         end
     end
 
+    @testset "Graph Interface" begin
+        conn = GraphConnection(6.)
+
+        price = zeros(Float64, 96)
+        p = PriceInterface(price, conn)
+        @test isa(p, District.AbstractInterface)
+        price2 = ones(Float64, 96)
+        District.swap!(p, price2)
+        @test p.price == price2
+
+        f = FlowInterface(zeros(Float64, 96))
+        @test isa(f, District.AbstractInterface)
+    end
 
     @testset "Irradiation" begin
         env = R6C2("rt1988")

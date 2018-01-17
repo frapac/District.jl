@@ -11,7 +11,8 @@
 
 ################################################################################
 export EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice, RecoursePrice
-export NightSetPoint
+export NightSetPoint, EDFInjection
+export Billing
 
 # Definition of prices
 abstract type AbstractPrice <: AbstractData end
