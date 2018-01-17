@@ -9,6 +9,7 @@ push!(LOAD_PATH, "..")
 using Base.Test
 using District, StochDynamicProgramming
 
+srand(2713)
 
 
 @testset "Simulation" begin

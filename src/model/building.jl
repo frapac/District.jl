@@ -53,6 +53,7 @@ set!(h::House, p::AbstractPrice) = set!(h.billing, p)
 
 
 nstocks(h::House) = sum(nstates.(h.devices))
+ncontrols(h::House) = sum(ncontrols.(h.devices))
 nnoises(h::House) = sum(nnoise.(h.noises))
 
 
@@ -220,8 +221,21 @@ end
 ################################################################################
 # DYNAMICS DEFINITION
 ################################################################################
+function parsebuilding(house::House, xindex::Int, uindex::Int, dt::Float64, params::Dict)
+    exdyn = Expr[]
+    for dev in house.devices
+        dyn = parsedevice(dev, xindex, uindex, house.time.δt, params)
+        xindex += nstates(dev)
+        uindex += ncontrols(dev)
+
+        for d in dyn
+            push!(exdyn, d)
+        end
+    end
+    return exdyn
+end
+
 function builddynamic(house::House)
-    x0=[.6, 6, 16, 16]
     ntime = ntimesteps(house.time)
     pint, pext = get_irradiation(house)
     params = Dict()
@@ -232,15 +246,7 @@ function builddynamic(house::House)
     xindex = 1
     uindex = 1
     exdyn = Expr(:vect)
-    for dev in house.devices
-        dyn = parsedevice(dev, xindex, uindex, house.time.δt, params)
-        xindex += nstates(dev)
-        uindex += ncontrols(dev)
-
-        for d in dyn
-            push!(exdyn.args, d)
-        end
-    end
+    exdyn.args = parsebuilding(house, xindex, uindex, house.time.δt, params)
 
     return eval(:((t, x, u, w) -> $exdyn))
 end
@@ -250,11 +256,10 @@ end
 ################################################################################
 # LOAD DEFINITION
 ################################################################################
-function buildload!(house::House)
+function buildload!(house::House, uindex=1)
     ntime = ntimesteps(house.time)
 
     # build load corresponding to device
-    uindex = 1
     excost = Expr(:call, :+)
     exgas = Expr(:call, :+)
     for dev in house.devices

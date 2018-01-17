@@ -75,7 +75,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
 
     # build objective: we penalize elec and thermal comfort.
     set!(house, EDFPrice(ts))
-    #= set!(house, ComfortPrice(ts)) =#
+    set!(house, ComfortPrice(ts))
 
     return house
 end
