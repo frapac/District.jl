@@ -11,6 +11,7 @@ export Network, Grid, build!
 
 abstract type AbstractNetwork end
 
+immutable NoneNetwork <: AbstractNetwork end
 
 mutable struct Network <: AbstractNetwork
     # number of timesteps
@@ -79,6 +80,7 @@ struct Grid <: AbstractGrid
     # Edges
     net::AbstractNetwork
 end
+Grid(ts::AbstractTimeSpan) = Grid(ts, AbstractNode[], NoneNetwork())
 
 nnodes(pb::Grid) = length(pb.nodes)
 narcs(pb::Grid) = pb.net.narcs
@@ -109,4 +111,82 @@ function swap!(pb::Grid, mul::Vector{Float64})
     end
     # swap transport problem
     swap!(pb.net, mul)
+end
+
+function getproblem(pb::Grid, x0::Vector{Float64})
+    xb = vcat(xbounds.(pb.nodes)...)
+    ub = vcat(ubounds.(pb.nodes)...)
+    # add flow control
+    ub = vcat(ub, [(-m, m) for m in pb.net.maxflow])
+
+    dynam = builddynamic(pb)
+    costm = buildcost(pb)
+    constr = buildconstr(pb)
+    laws = buildlaws(pb)
+
+    spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
+                                                  x0, costm,
+                                                  dynam,
+                                                  tonoiselaws(laws),
+                                                  info=:HD,
+                                                  eqconstr=constr,
+                                                  Vfinal=fcost)
+
+    set_state_bounds(spmodel, xb)
+    return spmodel
+end
+
+function builddynamic(pb::Grid)
+    ntime = ntimes(pb)
+    xindex = 1
+    uindex = 1
+    exdyn = Expr(:vect)
+
+    params = Dict()
+    params["text"] = loadweather(OutdoorTemperature(), ntime)
+
+    for dev in pb.nodes
+        # update irradiation in params
+        pint, pext = get_irradiation(dev)
+        params["pint"] = pint
+        params["pext"] = pext
+
+        # parse dynamics of nodes
+        ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)
+        xindex += nstates(dev)
+        uindex += ncontrols(dev)
+        # push expression in global expression
+        push!(exdyn.args, ex...)
+    end
+
+    return eval(:((t, x, u, w) -> $exdyn))
+end
+
+function buildcost(pb::Grid)
+    function costm(m, t, x, u, w)
+        cost = AffExpr(0.)
+        uindex = 1
+        for d in pb.nodes
+            # rebuild problem in Node `d`, starting from uindex
+            buildload!(d, uindex)
+            cost += objective(d)(t, x, u, w)
+            uindex += ncontrols(d)
+        end
+        return cost
+    end
+end
+
+# get index of flow importations in node
+# remember: flow is last control in each node (u[end]) so its position
+# is ncontrols
+getflowindex(pb::Grid) = cumsum(ncontrols.(pb.nodes))
+
+# Build coupling constraint Aq + F for a grid.
+function buildconstr(pb::Grid)
+    na = narcs(pb)
+    A = pb.net.A
+    # TODO: build
+    findex = getflowindex(pb)
+
+    constr(t, x, u, w) = A * u[end-na+1:end] + u[findex]
 end

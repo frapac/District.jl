@@ -12,7 +12,7 @@ A = [1. -1.]'
 
 
 # Build problem
-ts = TimeSpan(200, 1)
+ts = TimeSpan(2, 1)
 
 # we build two houses
 h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=1))
