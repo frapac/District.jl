@@ -10,34 +10,11 @@ using Base.Test
 using District, StochDynamicProgramming
 
 
-function buildhouse()
-
-    ts = TimeSpan(0, 1)
-    house = House(ts)
-
-    # add devices to house
-    for (Device, name) in zip([Battery, ElecHotWaterTank, R6C2], ["bat0", "ehwt0", "rt1988"])
-        d = Device(name)
-        add!(house, d)
-    end
-
-    # add elec load
-    wdem = Demands(10, 1)
-    add!(house, wdem)
-
-    set!(house, EDFPrice(ts))
-    set!(house, ComfortPrice(ts))
-
-    # add initial pos
-    x0 = [.55, 2., 16., 16.]
-    District.build!(house, x0)
-
-    return house
-end
-
 
 @testset "Simulation" begin
-    house = buildhouse()
+    ts = TimeSpan(0, 1)
+    house = load(ts, ElecHouse())
+    District.build!(house, [2., 16., 16.])
     nscen = 10
 
     # Build simulator
@@ -62,5 +39,6 @@ end
     for pol in [mpcpol, dppol]
         res = District.simulate(sim, pol)
         @test isa(res, SimulationResult)
+        println(res)
     end
 end
