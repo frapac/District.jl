@@ -228,9 +228,7 @@ function parsebuilding(house::House, xindex::Int, uindex::Int, dt::Float64, para
         xindex += nstates(dev)
         uindex += ncontrols(dev)
 
-        for d in dyn
-            push!(exdyn, d)
-        end
+        push!(exdyn, dyn...)
     end
     return exdyn
 end

@@ -152,6 +152,7 @@ function builddynamic(pb::Grid)
         params["pext"] = pext
 
         # parse dynamics of nodes
+        # TODO: w index in builder
         ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)
         xindex += nstates(dev)
         uindex += ncontrols(dev)

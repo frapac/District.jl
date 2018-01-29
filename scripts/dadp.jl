@@ -9,28 +9,33 @@ srand(2713)
 
 
 A = [1. -1.]'
+#= A = [-1 0; =#
+#=      1 -1; =#
+#=      0 1] =#
 
 
 # Build problem
-ts = TimeSpan(2, 1)
+ts = TimeSpan(180, 1)
 
 # we build two houses
 h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=1))
-h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=1))
+h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=10))
+h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=2, nbins=10))
 xini = Dict(h1=> [.55, 2., 20., 20.],
             h2=> [2., 20., 20.])
+            #= h3=> [2., 20., 20.]) =#
 
 net = Network(ts, A)
 
 pb = Grid(ts, [h1, h2], net)
 build!(pb, xini)
-algo = DADP(pb, nsimu=1)
+algo = DADP(pb, nsimu=100)
 
 
 f, grad! = District.oracle(pb, algo)
 
 # Launch Gradient Descent!
-x0 = zeros(Float64, 190)
+x0 = zeros(Float64, 2*95)
 res = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-8)
 #= options = Optim.Options(g_tol=1e-8, allow_f_increases=false, show_trace=true, =#
 #=                         iterations=20, store_trace=true, extended_trace=false) =#
