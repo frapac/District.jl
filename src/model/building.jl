@@ -148,7 +148,7 @@ function objective(house::House)
     return costm
 end
 
-buildlink!(house::House) = link!.(house, house.links)
+buildlink!(house::House, uindex::Int=0, windex::Int=0) = link!.(house, house.links, uindex, windex)
 
 # TODO: clean definition of final cost
 function buildfcost(house::House)
@@ -324,24 +324,24 @@ join!(house::House, din::AbstractModel, dout::AbstractModel) = push!(house.links
 # TODO: use thermalload instead
 # TODO: link! does not happen at parse time (ie when build! is called)
 # We can link EHWT only to DHW demands
-function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty)
-    indw = windex(house, w)
+function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty, uind::Int, wind::Int)
+    indw = windex(house, w) + wind
     push!(hwt.output.args, :(w[$indw]))
 end
 
-function link!(house::House, hwt::ThermalHotWaterTank, h::ThermalHeater)
-    indu = uindex(house, h)
+function link!(house::House, hwt::ThermalHotWaterTank, h::ThermalHeater, uind::Int, wind::Int)
+    indu = uindex(house, h) + uind
     push!(hwt.output.args, :(u[$indu]))
 end
 
-function link!(house::House, hwt::ThermalHotWaterTank, chp::MicroCHP)
-    indu = uindex(house, chp)
+function link!(house::House, hwt::ThermalHotWaterTank, chp::MicroCHP, uind::Int, wind::Int)
+    indu = uindex(house, chp) + uind
     push!(hwt.input.args, :($(thermalload(chp, indu))))
 end
 
 # add heater to R6C2
-function link!(house::House, thm::R6C2, heat::AbstractHeater)
-    indu = uindex(house, heat)
+function link!(house::House, thm::R6C2, heat::AbstractHeater, uind::Int, wind::Int)
+    indu = uindex(house, heat) + uind
     push!(thm.input.args, :(u[$indu]))
 end
 

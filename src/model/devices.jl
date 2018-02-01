@@ -426,4 +426,4 @@ struct Link <: AbstractLink
     dout::AbstractModel
 end
 
-link!(n::AbstractNode, l::Link) = link!(n, l.din, l.dout)
+link!(n::AbstractNode, l::Link, uindex::Int, windex::Int) = link!(n, l.din, l.dout, uindex, windex)
