@@ -114,6 +114,12 @@ function swap!(pb::Grid, mul::Vector{Float64})
 end
 
 function getproblem(pb::Grid)
+    uindex = 1
+    for d in pb.nodes
+        # rebuild problem in Node `d`, starting from uindex
+        buildload!(d, uindex)
+        uindex += ncontrols(d)
+    end
     x0 = initpos(pb)
     xb = vcat(xbounds.(pb.nodes)...)
     ub = vcat(ubounds.(pb.nodes)...)
@@ -184,12 +190,8 @@ end
 function buildcost(pb::Grid)
     function costgrid(m, t, x, u, w)
         cost = AffExpr(0.)
-        uindex = 1
         for d in pb.nodes
-            # rebuild problem in Node `d`, starting from uindex
-            buildload!(d, uindex)
-            cost += objective(d)(t, x, u, w)
-            uindex += ncontrols(d)
+            cost += objective(d)(m, t, x, u, w)
         end
         return cost
     end
