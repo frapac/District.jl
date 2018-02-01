@@ -416,3 +416,14 @@ nstates(conn::GraphConnection) = 0
 ncontrols(conn::GraphConnection) = 1
 xbounds(conn::GraphConnection) = Tuple{Float64, Float64}[]
 ubounds(conn::GraphConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
+
+
+################################################################################
+# Link between two devices
+abstract type AbstractLink end
+struct Link <: AbstractLink
+    din::AbstractModel
+    dout::AbstractModel
+end
+
+link!(n::AbstractNode, l::Link) = link!(n, l.din, l.dout)

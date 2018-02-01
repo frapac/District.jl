@@ -58,7 +58,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
     add!(house, heat)
 
     # link heater to thermal envelope
-    link!(house, thm, heat)
+    join!(house, thm, heat)
 
     # import demands
     wdem = Demands(prof.nbinsdem, prof.idhouse)
@@ -71,7 +71,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
     end
 
     # link hot water tank with hot water demand
-    link!(house, hwt, wdem)
+    join!(house, hwt, wdem)
 
     # build objective: we penalize elec and thermal comfort.
     set!(house, EDFPrice(ts))
@@ -116,9 +116,9 @@ function load(ts::TimeSpan, prof::CHPHouse)
     heat = ThermalHeater(prof.heater)
     add!(house, heat)
 
-    link!(house, thm, heat)
-    link!(house, hwt, heat)
-    link!(house, hwt, chp)
+    join!(house, thm, heat)
+    join!(house, hwt, heat)
+    join!(house, hwt, chp)
 
     # import demands
     wdem = Demands(10, prof.idhouse)

@@ -113,7 +113,8 @@ function swap!(pb::Grid, mul::Vector{Float64})
     swap!(pb.net, mul)
 end
 
-function getproblem(pb::Grid, x0::Vector{Float64})
+function getproblem(pb::Grid)
+    x0 = initpos(pb)
     xb = vcat(xbounds.(pb.nodes)...)
     ub = vcat(ubounds.(pb.nodes)...)
     # add flow control
@@ -124,13 +125,13 @@ function getproblem(pb::Grid, x0::Vector{Float64})
     constr = buildconstr(pb)
     laws = buildlaws(pb)
 
+    # TODO: how to define global fcost???
     spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
                                                   x0, costm,
                                                   dynam,
                                                   tonoiselaws(laws),
                                                   info=:HD,
-                                                  eqconstr=constr,
-                                                  Vfinal=fcost)
+                                                  eqconstr=constr)
 
     set_state_bounds(spmodel, xb)
     return spmodel
@@ -160,7 +161,6 @@ function builddynamic(pb::Grid)
         push!(exdyn.args, ex...)
     end
 
-    println(exdyn)
     return eval(:((t, x, u, w) -> $exdyn))
 end
 
@@ -196,6 +196,7 @@ end
 # Build probability laws for grid `pb`.
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
+# TODO: can build very large 3D arrays...
 function buildlaws(pb::Grid, nscen=100, nbins=10)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))
@@ -214,3 +215,6 @@ function buildlaws(pb::Grid, nscen=100, nbins=10)
     # then, we quantize vectors in dimension `nw`
     return WhiteNoise(scenarios, nbins, KMeans())
 end
+
+
+initpos(pb::Grid) = vcat([h.model.initialState for h in pb.nodes]...)

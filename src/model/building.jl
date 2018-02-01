@@ -36,6 +36,8 @@ mutable struct House <: AbstractBuilding
     elecload::Function
     # gas load
     gasload::Function
+    # links
+    links::Vector{AbstractLink}
     # Inteface with graph
     conn::AbstractInterface
     # SP model
@@ -46,6 +48,7 @@ House(ts::AbstractTimeSpan) = House(gensym(), ts, AbstractDevice[],
                                     AbstractUncertainty[], Billing(),
                                     (t, x, u, w) -> 0.,
                                     (t, x, u, w) -> 0.,
+                                    AbstractLink[],
                                     NoneInterface(), nothing)
 add!(h::House, dev::AbstractDevice) = push!(h.devices, dev)
 add!(h::House, w::AbstractUncertainty) = push!(h.noises, w)
@@ -62,6 +65,9 @@ function build!(house::House, x0::Vector{Float64})
     ntime = ntimesteps(house.time)
     xb = xbounds(house)
     ub = ubounds(house)
+
+    # TODO: build linker here
+    buildlink!(house)
 
     # build probability laws
     laws = buildlaws(house)
@@ -142,6 +148,7 @@ function objective(house::House)
     return costm
 end
 
+buildlink!(house::House) = link!.(house, house.links)
 
 # TODO: clean definition of final cost
 function buildfcost(house::House)
@@ -307,11 +314,13 @@ function getrealcost(house::House)
 
     return real_cost
 end
+# TODO: final cost still hardcoded!!!
 realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
 
 ################################################################################
 # LINKERS
 ################################################################################
+join!(house::House, din::AbstractModel, dout::AbstractModel) = push!(house.links, Link(din, dout))
 # TODO: use thermalload instead
 # TODO: link! does not happen at parse time (ie when build! is called)
 # We can link EHWT only to DHW demands
