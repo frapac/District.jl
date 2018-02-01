@@ -70,6 +70,12 @@ function ubounds end
 "Specify whether device is stock"
 function isstock end
 
+"""
+    reset!(d::AbstractDevice)
+
+Reset device."""
+function reset! end
+
 ################################################################################
 # Generic implementation
 isstock(dev::AbstractDevice) = nstates(dev) > 0
@@ -78,6 +84,7 @@ isstock(dev::AbstractDevice) = nstates(dev) > 0
 elecload(d::AbstractDevice, uindex::Int) = :(0.)
 thermalload(d::AbstractDevice, uindex::Int) = :(0.)
 gasload(d::AbstractDevice, uindex::Int) = :(0.)
+reset!(d::AbstractDevice) = nothing
 
 ################################################################################
 # Battery
@@ -161,6 +168,7 @@ end
 elecload(hwt::ElecHotWaterTank, uindex::Int) = :(u[$uindex])
 thermalload(hwt::ElecHotWaterTank, uindex::Int) = :(0.)
 
+reset!(hwt::ElecHotWaterTank)= (hwt.output.args = Any[:+])
 nstates(hwt::ElecHotWaterTank) = 1
 ncontrols(hwt::ElecHotWaterTank) = 1
 xbounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
@@ -208,6 +216,10 @@ function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt, p::
 end
 
 
+function reset!(hwt::ThermalHotWaterTank)
+    hwt.input.args = Any[:+]
+    hwt.output.args = Any[:+]
+end
 nstates(hwt::ThermalHotWaterTank) = 1
 ncontrols(hwt::ThermalHotWaterTank) = 0
 xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
@@ -327,6 +339,7 @@ function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
     return dyn
 end
 
+reset!(hwt::R6C2)= (hwt.input.args = Any[:+])
 nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 0
 xbounds(thm::R6C2) = Tuple{Float64, Float64}[(-50., 100.), (-50., 100.)]

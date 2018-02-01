@@ -120,6 +120,7 @@ function getproblem(pb::Grid)
     # add flow control
     ub = vcat(ub, [(-m, m) for m in pb.net.maxflow])
 
+    buildlink!(pb)
     dynam = builddynamic(pb)
     costm = buildcost(pb)
     constr = buildconstr(pb)
@@ -136,6 +137,21 @@ function getproblem(pb::Grid)
     set_state_bounds(spmodel, xb)
     return spmodel
 end
+
+function buildlink!(pb::Grid)
+    uindex = 0
+    windex = 0
+    for node in pb.nodes
+        # reset all devices Expr
+        reset!.(node.devices)
+        # build link with global index
+        buildlink!(node, uindex, windex)
+        # update global index
+        uindex += ncontrols(node)
+        windex += nnoises(node)
+    end
+end
+
 
 function builddynamic(pb::Grid)
     ntime = ntimes(pb)
@@ -161,11 +177,12 @@ function builddynamic(pb::Grid)
         push!(exdyn.args, ex...)
     end
 
+    println(exdyn)
     return eval(:((t, x, u, w) -> $exdyn))
 end
 
 function buildcost(pb::Grid)
-    function costm(m, t, x, u, w)
+    function costgrid(m, t, x, u, w)
         cost = AffExpr(0.)
         uindex = 1
         for d in pb.nodes
@@ -176,6 +193,7 @@ function buildcost(pb::Grid)
         end
         return cost
     end
+    return costgrid
 end
 
 # get index of flow importations in node
