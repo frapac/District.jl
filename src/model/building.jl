@@ -313,6 +313,7 @@ realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
 # LINKERS
 ################################################################################
 # TODO: use thermalload instead
+# TODO: link! does not happen at parse time (ie when build! is called)
 # We can link EHWT only to DHW demands
 function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty)
     indw = windex(house, w)

@@ -143,7 +143,7 @@ function builddynamic(pb::Grid)
     exdyn = Expr(:vect)
 
     params = Dict()
-    params["text"] = loadweather(OutdoorTemperature(), ntime)
+    params["text"] = loadweather(OutdoorTemperature(), pb.ts)
 
     for dev in pb.nodes
         # update irradiation in params
@@ -154,12 +154,13 @@ function builddynamic(pb::Grid)
         # parse dynamics of nodes
         # TODO: w index in builder
         ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)
-        xindex += nstates(dev)
+        xindex += nstocks(dev)
         uindex += ncontrols(dev)
         # push expression in global expression
         push!(exdyn.args, ex...)
     end
 
+    println(exdyn)
     return eval(:((t, x, u, w) -> $exdyn))
 end
 
@@ -186,8 +187,30 @@ getflowindex(pb::Grid) = cumsum(ncontrols.(pb.nodes))
 function buildconstr(pb::Grid)
     na = narcs(pb)
     A = pb.net.A
-    # TODO: build
     findex = getflowindex(pb)
 
     constr(t, x, u, w) = A * u[end-na+1:end] + u[findex]
+end
+
+
+# Build probability laws for grid `pb`.
+# WARNING
+# Subject to curse of dimensionality (build laws in high dimension).
+function buildlaws(pb::Grid, nscen=100, nbins=10)
+    # get total number of uncertainties
+    nw = sum(nnoises.(pb.nodes))
+
+    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+
+    iw = 1
+
+    for node in pb.nodes
+        for ξ in node.noises
+            ntw = nnoise(ξ)
+            scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
+            iw += ntw
+        end
+    end
+    # then, we quantize vectors in dimension `nw`
+    return WhiteNoise(scenarios, nbins, KMeans())
 end

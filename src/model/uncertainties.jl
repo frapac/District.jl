@@ -27,6 +27,14 @@ function loadnoise end
 function nnoise end
 
 """
+    optscenarios(w::AbstractUncertainty, ts::AbstractTimeSpan, nscen::Int)
+
+Load `nscen` scenarios during period specified in TimeSpan `ts`.
+Return data as `Array{Float64, 3}`.
+"""
+function optscenarios end
+
+"""
     genscenarios(w::AbstractUncertainty, ts::AbstractTimeSpan, nscen::Int)
 
 Generate `nscen` scenarios of AbstractUncertainty `w` during period
@@ -83,6 +91,8 @@ function _loadnoise(d::Demands, ts::AbstractTimeSpan, nf, nt)
     return noises
 end
 
+optscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int) = _loadnoise(d, ts, 1, nscen)
+
 elecload(d::Demands, windex) = :(w[$windex])
 nnoise(d::Demands) = 2
 
@@ -127,6 +137,8 @@ function genscenarios(pv::PVProduction, ts::AbstractTimeSpan, nscen::Int)
     end
     return scen
 end
+
+optscenarios(pv::PVProduction, ts::AbstractTimeSpan, nscen) = genscenarios(pv, ts, nscen)
 
 """Generate scenarios for PV with real laws."""
 function genrandomproduction(val, δ)
