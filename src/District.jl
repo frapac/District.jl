@@ -43,6 +43,8 @@ include("model/building.jl")
 include("model/samples.jl")
 # Network definition
 include("model/network.jl")
+# Grid definition
+include("model/grid.jl")
 
 ##########
 # ALGO

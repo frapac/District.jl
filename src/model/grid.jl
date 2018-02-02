@@ -61,10 +61,12 @@ function getproblem(pb::Grid)
     # to avoid world age problem, we rebuild elecload and gasload
     # right now.
     uindex = 1
+    windex = 1
     for d in pb.nodes
         # rebuild problem in Node `d`, starting from uindex
-        buildload!(d, uindex)
+        buildload!(d, uindex, windex)
         uindex += ncontrols(d)
+        windex += nnoises(d)
     end
 
     # get global initial position
@@ -92,6 +94,7 @@ function getproblem(pb::Grid)
                                                   dynam,
                                                   tonoiselaws(laws),
                                                   info=:HD,
+                                                  Vfinal=buildfcost(pb),
                                                   eqconstr=constr)
 
     set_state_bounds(spmodel, xb)
@@ -146,8 +149,10 @@ end
 function buildcost(pb::Grid)
     function costgrid(m, t, x, u, w)
         cost = AffExpr(0.)
+        xindex = 0
         for d in pb.nodes
-            cost += objective(d)(m, t, x, u, w)
+            cost += objective(d, xindex)(m, t, x, u, w)
+            xindex += nstocks(d)
         end
         return cost
     end
@@ -204,3 +209,27 @@ function getrealcost(pb::Grid)
     end
     return realcost
 end
+
+# TODO: clean definition of final cost (again!!!)
+# TODO: not a clean implementation...
+function buildfcost(pb::Grid)
+    function final_cost(model, m)
+        alpha = m[:alpha]
+        x = m[:x]
+        u = m[:u]
+        xf = m[:xf]
+
+        xindex = 0
+        @JuMP.variable(m, z1[1:nnodes(pb)]>=0)
+        for (id, d) in enumerate(pb.nodes)
+            # get tank position
+            postank = getposition(d, ElecHotWaterTank)
+            @JuMP.constraint(m, z1[id] >= PENAL_TANK * (2. - xf[postank+xindex]))
+            xindex += nstocks(d)
+        end
+
+        @JuMP.constraint(m, alpha == sum(z1))
+    end
+    return final_cost
+end
+

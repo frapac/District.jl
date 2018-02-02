@@ -19,6 +19,7 @@ struct SimulationResult
 end
 
 # TODO: .25 hardcoded
+# overload Base.show
 function show(io::IO, res::SimulationResult)
     @printf("Costs: %.4f ± %.4f €\n", mean(.25res.costs), std(.25res.costs))
 end
@@ -53,6 +54,16 @@ function Simulator(n::AbstractNode, nassess::Int)
     return Simulator(ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
 end
 
+
+# adapt Simulator for grid
+function Simulator(pb::AbstractGrid, nassess::Int)
+    ts = pb.ts
+    scen = genassessments(pb, nassess)
+    # build global problem
+    spmodel = getproblem(pb)
+    return Simulator(ts, spmodel, scen, spmodel.dynamics,
+                     getrealcost(pb), (x) -> 0)
+end
 
 
 

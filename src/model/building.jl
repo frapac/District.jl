@@ -99,7 +99,7 @@ end
 ################################################################################
 # COST DEFINITION
 ################################################################################
-function objective(house::House)
+function objective(house::House, xindex=0)
     bill = house.billing
 
     function costm(m, t, x, u, w)
@@ -120,7 +120,7 @@ function objective(house::House)
         # add thermal comfort
         if ~isa(bill.comfort, NoneComfort)
             # get index of inner temperature
-            itemp = getposition(house, R6C2)
+            itemp = getposition(house, R6C2) + xindex
             zth1 = @JuMP.variable(m, lowerbound=0)
             @constraint(m, zth1 >= -bill.comfort(t)*(x[itemp] - setpoint(bill.comfort, t) + 1))
             push!(vals, zth1)
@@ -261,7 +261,7 @@ end
 ################################################################################
 # LOAD DEFINITION
 ################################################################################
-function buildload!(house::House, uindex=1)
+function buildload!(house::House, uindex=1, windex=1)
     ntime = ntimesteps(house.time)
 
     # build load corresponding to device
@@ -276,7 +276,6 @@ function buildload!(house::House, uindex=1)
     end
 
     # build load corresponding to noise
-    windex = 1
     for ξ in house.noises
         push!(excost.args, elecload(ξ, windex))
         windex += nnoise(ξ)

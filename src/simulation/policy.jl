@@ -180,6 +180,11 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
         @constraint(m, policy.V[t+1].betas[nc] + dot(lambda, xf) <= alpha)
     end
 
+    # TODO: add equality constraint
+    if ~isnull(model.equalityConstraints)
+        @constraint(m, get(model.equalityConstraints)(t, x, u, w) .== 0)
+    end
+
     # Add final cost
     if t == ntime(policy) - 1
         model.finalCost(model, m)
@@ -223,6 +228,11 @@ function buildproblem!(policy::WaitAndSeeDP, model, t::Int)
         for j=1:ns
             @constraint(m, policy.V[t+1].betas[nc] + dot(lambda, xf[:, j]) <= alpha[j])
         end
+    end
+
+    # TODO: add equality constraint
+    if ~isnull(model.equalityConstraints)
+        @constraint(m, get(model.equalityConstraints)(t, x, u, w) .== 0)
     end
 
     policy.problem = m
@@ -305,7 +315,7 @@ function buildproblem!(policy::DADPPolicy, model, t::Int)
     # For all i ∈ [1, N], we set : α[i] = V_{t+1}^i (x_{t+1})
     @variable(m, α[1:nvf])
     # Here, we consider that global value function is
-    # V^{tot}_t(x_t) = ∑_{i∈N} V_t^i(x_t)
+    # V^{tot}_t(x_t) = ∑_{i∈N} V_t^i(x_t^i)
     @objective(m, Min, model.costFunctions(m, t, x, u, w) + sum(α[i] for i in 1:nvf))
 
     xcount = 1
