@@ -261,3 +261,93 @@ function (p::WaitAndSeeDP)(x, ξ)
     status = JuMP.solve(m, suppress_warnings=false)
     return getvalue(u)
 end
+
+
+################################################################################
+# DADP POLICY
+################################################################################
+abstract type AbstractDADPPolicy <: AbstractPolicy end
+
+ntime(p::AbstractDADPPolicy) = length(p.V[1])
+
+# Here and Now DP policy
+mutable struct DADPPolicy <: AbstractDADPPolicy
+    # JuMP Model
+    problem::JuMP.Model
+    # Value functions
+    V::Vector{Vector{PolyhedralFunction}}
+    # LP solver
+    solver
+end
+DADPPolicy(V) = DADPPolicy(Model(), V, get_solver())
+
+
+function buildproblem!(policy::DADPPolicy, model, t::Int)
+    m = Model(solver=policy.solver)
+
+    # get number of value functions
+    nvf = length(policy.V)
+    nx = model.dimStates
+    nu = model.dimControls
+    nw = model.dimNoises
+
+    @variable(m,  model.xlim[i][1] <= x[i=1:nx] <= model.xlim[i][2])
+    @variable(m,  model.xlim[i][1] <= xf[i=1:nx]<= model.xlim[i][2])
+    @variable(m,  model.ulim[i][1] <= u[i=1:nu] <=  model.ulim[i][2],
+              category=model.controlCat[i])
+    @variable(m, alpha)
+
+    @variable(m, w[1:nw] == 0)
+    m.ext[:cons] = @constraint(m, state_constraint, x .== 0)
+
+    @constraint(m, xf .== model.dynamics(t, x, u, w))
+
+    # For all i ∈ [1, N], we set : α[i] = V_{t+1}^i (x_{t+1})
+    @variable(m, α[1:nvf])
+    # Here, we consider that global value function is
+    # V^{tot}_t(x_t) = ∑_{i∈N} V_t^i(x_t)
+    @objective(m, Min, model.costFunctions(m, t, x, u, w) + sum(α[i] for i in 1:nvf))
+
+    xcount = 1
+    for idim in 1:nvf
+        Vi = policy.V[idim][t+1]
+        nxi = size(Vi.lambdas, 2)
+
+        for nc in 1:Vi.numCuts
+            lambda = Vi.lambdas[nc, :]
+            # we penalize only portion of xf corresponding to node `idim`
+            @constraint(m, Vi.betas[nc] + dot(lambda, xf[xcount:xcount+nxi-1]) <= α[idim])
+        end
+        xcount += nxi
+    end
+
+    if ~isnull(model.equalityConstraints)
+        @constraint(m, get(model.equalityConstraints)(t, x, u, w) .== 0)
+    end
+
+    # Add final cost
+    if t == ntime(policy) - 1
+        model.finalCost(model, m)
+    end
+    policy.problem = m
+end
+
+
+# DADPPolicy is basically a HereAndNow policy
+function (p::DADPPolicy)(x, ξ)
+    m = p.problem
+    u = m[:u]
+    w = m[:w]
+
+    # Update value of w:
+    for ii in 1:endof(ξ)
+        JuMP.fix(w[ii], ξ[ii])
+    end
+    # Update constraint x == xt
+    for i in 1:endof(x)
+        JuMP.setRHS(m.ext[:cons][i], x[i])
+    end
+
+    status = JuMP.solve(m, suppress_warnings=false)
+    return getvalue(u)
+end
