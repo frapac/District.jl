@@ -24,6 +24,25 @@ function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty
     return assessment
 end
 
+# overload to generate assessment scenarios directly with node
+genassessments(node::AbstractNode, nscen::Int) = genassessments(node.time, node.noises, nscen)
+
+function genassessments(pb::Grid, nscen::Int)
+    # get total number of uncertainties
+    nw = sum(nnoises.(pb.nodes))
+
+    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+
+    iw = 1
+
+    for node in pb.nodes
+        nwnode = nnoises(node)
+        scenarios[:, :, iw:iw+nwnode-1] = genassessments(node, nscen)
+        iw += nwnode
+    end
+    return scenarios
+end
+
 
 """Simulate in-sample scenarios."""
 function genscen(model::StochDynamicProgramming.SPModel, nscen::Int)
