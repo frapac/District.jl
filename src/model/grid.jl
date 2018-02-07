@@ -57,7 +57,7 @@ end
 ################################################################################
 initpos(pb::Grid) = vcat([h.model.initialState for h in pb.nodes]...)
 
-function getproblem(pb::Grid)
+function getproblem(pb::Grid, generation="reduction", nbins=10, noptscen=100)
     # to avoid world age problem, we rebuild elecload and gasload
     # right now.
     uindex = 1
@@ -86,9 +86,13 @@ function getproblem(pb::Grid)
     # build coupling constraint Aq+f, modeling graph topology
     constr = buildconstr(pb)
     # build global noise laws (warning: |WW| may be very large)
-    laws = buildlaws(pb)
+    if generation == "reduction"
+        laws = buildlaws(pb, noptscen, nbins)
+    elseif generation == "total"
+        # warning: usually intractable!!
+        laws = WhiteNoise(Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes]...))
+    end
 
-    # TODO: how to define global fcost???
     spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
                                                   x0, costm,
                                                   dynam,
@@ -178,6 +182,7 @@ end
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
+# TODO: clean arguments
 function buildlaws(pb::Grid, nscen=100, nbins=10)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))

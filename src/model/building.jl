@@ -95,6 +95,9 @@ end
 function tonoiselaws(laws::WhiteNoise)
     NoiseLaw[NoiseLaw(laws[t].support', laws[t].probas) for t in 1:length(laws)]
 end
+function towhitenoise(laws::Vector{NoiseLaw})
+    WhiteNoise([DiscreteLaw(w.support', w.proba) for w in laws])
+end
 
 ################################################################################
 # COST DEFINITION

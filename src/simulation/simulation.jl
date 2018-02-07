@@ -56,11 +56,12 @@ end
 
 
 # adapt Simulator for grid
-function Simulator(pb::AbstractGrid, nassess::Int)
+function Simulator(pb::AbstractGrid, nassess::Int;
+                   generation="reduction", nbins=10, noptscen=100)
     ts = pb.ts
     scen = genassessments(pb, nassess)
     # build global problem
-    spmodel = getproblem(pb)
+    spmodel = getproblem(pb, generation, nbins, noptscen)
     return Simulator(ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), (x) -> 0)
 end
