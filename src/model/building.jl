@@ -317,7 +317,7 @@ function getrealcost(house::House)
     return real_cost
 end
 # TODO: final cost still hardcoded!!!
-realfinalcost(xf) = PENAL_TANK*max(0, 6 - xf[2])
+realfinalcost(xf) = PENAL_TANK*max(0., 2. - xf[2])
 
 ################################################################################
 # LINKERS

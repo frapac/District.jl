@@ -63,7 +63,7 @@ function Simulator(pb::AbstractGrid, nassess::Int;
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
     return Simulator(ts, spmodel, scen, spmodel.dynamics,
-                     getrealcost(pb), (x) -> 0)
+                     getrealcost(pb), getrealfinalcost(pb))
 end
 
 

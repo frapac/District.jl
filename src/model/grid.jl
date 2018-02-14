@@ -238,3 +238,18 @@ function buildfcost(pb::Grid)
     return final_cost
 end
 
+function getrealfinalcost(pb::Grid)
+    function fcost(x)
+        cost = 0.
+        xindex = 0
+        for (id, d) in enumerate(pb.nodes)
+            # get tank position
+            postank = getposition(d, ElecHotWaterTank)
+            # TODO: hardcoded!!!!
+            cost += PENAL_TANK * (2. - x[postank+xindex])
+            xindex += nstocks(d)
+        end
+        return cost
+    end
+    return fcost
+end
