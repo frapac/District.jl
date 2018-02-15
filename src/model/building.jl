@@ -102,7 +102,7 @@ end
 ################################################################################
 # COST DEFINITION
 ################################################################################
-function objective(house::House, xindex=0)
+function objective(house::House, xindex=0, uindex=0)
     bill = house.billing
 
     function costm(m, t, x, u, w)
@@ -137,16 +137,20 @@ function objective(house::House, xindex=0)
             push!(vals, zgas)
             push!(coefs, 1.0)
         end
-
         # add decomposition price
         if ~isa(house.conn, NoneInterface)
             # add < λ, F >
             u = m[:u]
-            push!(vals, u[end])
+            ifu = ncontrols(house) + uindex
+            push!(vals, u[ifu])
             push!(coefs, house.conn.price[t])
+            expr = JuMP.AffExpr(vals, coefs, 0.0)
+            expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
+        else
+            expr = JuMP.AffExpr(vals, coefs, 0.0)
         end
 
-        return JuMP.AffExpr(vals, coefs, 0.0)
+        return expr
     end
     return costm
 end

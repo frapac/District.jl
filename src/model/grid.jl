@@ -154,9 +154,11 @@ function buildcost(pb::Grid)
     function costgrid(m, t, x, u, w)
         cost = AffExpr(0.)
         xindex = 0
+        uindex = 0
         for d in pb.nodes
-            cost += objective(d, xindex)(m, t, x, u, w)
+            cost += objective(d, xindex, uindex)(m, t, x, u, w)
             xindex += nstocks(d)
+            uindex += ncontrols(d)
         end
         return cost
     end
