@@ -146,12 +146,12 @@ function builddynamic(pb::Grid)
         push!(exdyn.args, ex...)
     end
 
-    println(exdyn)
     return eval(:((t, x, u, w) -> $exdyn))
 end
 
 function buildcost(pb::Grid)
     function costgrid(m, t, x, u, w)
+        # production cost
         cost = AffExpr(0.)
         xindex = 0
         uindex = 0
@@ -160,6 +160,12 @@ function buildcost(pb::Grid)
             xindex += nstocks(d)
             uindex += ncontrols(d)
         end
+        # transport cost
+        na = narcs(pb)
+        @variable(m, qp)
+        @constraint(m, qp .>=  u[end-na+1:end])
+        @constraint(m, qp .>= -u[end-na+1:end])
+        cost += sum(pb.net.k1*qp) + pb.net.k2 * dot(qp, qp)
         return cost
     end
     return costgrid

@@ -27,6 +27,9 @@ mutable struct Network <: AbstractNetwork
     maxflow::Vector{Float64}
     # multiplier
     λ::Array{Float64, 2}
+    # transport cost
+    k1::Float64
+    k2::Float64
 end
 function Network(ts, A)
     ntime = ntimesteps(ts)
@@ -36,7 +39,7 @@ function Network(ts, A)
     # TODO: dry
     maxflow = 6 * ones(Float64, narcs)
 
-    return Network(ntime, Inf, Q, A, narcs, maxflow, λ)
+    return Network(ntime, Inf, Q, A, narcs, maxflow, λ, 0., 1e-2)
 end
 
 "Set multipliers inside Network `net`."

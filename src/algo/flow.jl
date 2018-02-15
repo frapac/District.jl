@@ -7,8 +7,8 @@
 """Solve transport problem in dual."""
 function solve!(net::Network)
     tcost = 0.
-    k1 = 0.
-    k2 = 1e-2
+    k1 = net.k1
+    k2 = net.k2
     λ = net.λ
     flows = zeros(Float64, net.ntime-1, size(net.A, 2))
 
