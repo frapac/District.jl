@@ -20,7 +20,7 @@ function solve!(net::Network)
         @variable(m, -net.maxflow[i] <= q[i=1:net.narcs] <= net.maxflow[i])
 
         # take qp = |q|
-        @variable(m, qp)
+        @variable(m, qp[1:net.narcs])
         @constraint(m, qp .>=  q)
         @constraint(m, qp .>= -q)
 

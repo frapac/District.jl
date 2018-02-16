@@ -90,7 +90,7 @@ function getproblem(pb::Grid, generation="reduction", nbins=10, noptscen=100)
         laws = buildlaws(pb, noptscen, nbins)
     elseif generation == "total"
         # warning: usually intractable!!
-        laws = WhiteNoise(Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes]...))
+        laws = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
     end
 
     spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
@@ -162,10 +162,12 @@ function buildcost(pb::Grid)
         end
         # transport cost
         na = narcs(pb)
-        @variable(m, qp)
+        # take abs |.| of flow q
+        @variable(m, qp[1:na])
         @constraint(m, qp .>=  u[end-na+1:end])
         @constraint(m, qp .>= -u[end-na+1:end])
-        cost += sum(pb.net.k1*qp) + pb.net.k2 * dot(qp, qp)
+        # add transportation cost to cost
+        cost += pb.net.k1*sum(qp) + pb.net.k2 * dot(qp, qp)
         return cost
     end
     return costgrid
