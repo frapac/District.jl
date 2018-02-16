@@ -167,7 +167,8 @@ function buildfcost(house::House)
         u = m[:u]
         xf = m[:xf]
         z1 = @JuMP.variable(m, lowerbound=0)
-        @JuMP.constraint(m, z1 >= PENAL_TANK * (2. - xf[2]))
+        postank = getposition(house, ElecHotWaterTank)
+        @JuMP.constraint(m, z1 >= PENAL_TANK * (2. - xf[postank]))
 
         #= z1 = @JuMP.variable(m, [1:length(fcost)], lowerbound=0) =#
         #= for id in 1:length(fcost) =#
