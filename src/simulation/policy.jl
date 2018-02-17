@@ -305,6 +305,7 @@ function buildproblem!(policy::DADPPolicy, model, t::Int)
     @variable(m,  model.xlim[i][1] <= xf[i=1:nx]<= model.xlim[i][2])
     @variable(m,  model.ulim[i][1] <= u[i=1:nu] <=  model.ulim[i][2],
               category=model.controlCat[i])
+    # TODO: get rid of alpha if not final Bellman operator
     @variable(m, alpha)
 
     @variable(m, w[1:nw] == 0)
@@ -338,6 +339,9 @@ function buildproblem!(policy::DADPPolicy, model, t::Int)
     # Add final cost
     if t == ntime(policy) - 1
         model.finalCost(model, m)
+        # set nodal value functions to 0
+        @constraint(m, α .== 0)
+        @objective(m, Min, model.costFunctions(m, t, x, u, w) + alpha)
     end
     policy.problem = m
 end
