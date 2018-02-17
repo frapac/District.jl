@@ -137,8 +137,9 @@ function objective(house::House, xindex=0, uindex=0)
             push!(vals, zgas)
             push!(coefs, 1.0)
         end
+
         # add decomposition price
-        if ~isa(house.conn, NoneInterface)
+        if isa(house.conn, PriceInterface)
             # add < λ, F >
             u = m[:u]
             ifu = ncontrols(house) + uindex
@@ -146,6 +147,13 @@ function objective(house::House, xindex=0, uindex=0)
             push!(coefs, house.conn.price[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
+        elseif isa(house.conn, FlowInterface)
+            # add F = V^k
+            u = m[:u]
+            ifu = ncontrols(house) + uindex
+            # TODO: do not consider these constraint in SDDP & assessment
+            m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.flow[t])
+            expr = JuMP.AffExpr(vals, coefs, 0.0)
         else
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         end
