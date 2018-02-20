@@ -5,6 +5,17 @@
 # Estimation by Monte Carlo sampling.
 ################################################################################
 
+"""
+    qsensitivity(sddp::SDDPInterface, scenarios::Array{Float64, 3}
+
+Extract sensitivity of problem w.r.t. coupling constraints along `scenarios`.
+"""
+function qsensitivity(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3})
+    return sensitivity(sddp.spmodel, sddp.params, sddp.solverinterface,
+                       scenarios, :cons)
+end
+
+
 function sensitivity(model::StochDynamicProgramming.SPModel,
                      param::StochDynamicProgramming.SDDPparameters,
                      solverProblems::Vector{JuMP.Model},
