@@ -27,4 +27,4 @@ struct FlowInterface <: AbstractInterface
     flow::Array{Float64}
 end
 
-swap!(p::FlowInterface, v::Array{Float64}) = p.flow = v
+swap!(p::FlowInterface, v::Array{Float64}) = copy!(p.flow, v)

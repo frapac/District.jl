@@ -8,9 +8,11 @@
 
 export SDDP
 
+abstract type AbstractDPSolver <: AbstractSolver end
+
 
 # TODO: improve description of SDDP
-immutable SDDP <: AbstractSolver
+immutable SDDP <: AbstractDPSolver
     nit::Int
 end
 

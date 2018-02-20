@@ -11,10 +11,11 @@ export DADP
 
 import Base: Base.show
 
+abstract type AbstractDecompositionSolver <: AbstractSolver end
 
 
 # TODO: move params in dedicated structure
-mutable struct DADP <: AbstractSolver
+mutable struct DADP <: AbstractDecompositionSolver
     # number of timesteps
     ntime::Int
     # current dual cost
@@ -73,17 +74,17 @@ function solve!(pb::Grid, dadp::DADP)
 end
 
 function simulate!(pb::Grid, dadp::DADP)
-    dadp.cost = 0
+    dadp.cost = 0.
     for (id, d) in enumerate(pb.nodes)
         c, _, u = StochDynamicProgramming.simulate(dadp.models[d.name], dadp.scen[id])
         # take average of importation flows for Node `d`
         dadp.F[id, :] = mean(u[:, :, end], 2)
         # take average of costs
-        dadp.cost += mean(c)
+        dadp.cost -= mean(c)
     end
 
     # add transportation cost
-    dadp.cost += pb.net.cost
+    dadp.cost -= pb.net.cost
     # update Q flows inside DADP
     copy!(dadp.Q, pb.net.Q)
 end
@@ -95,25 +96,31 @@ function ∇g(pb::Grid, dadp::DADP)
         q = dadp.Q[t, :]
         dg[t, :] = (pb.net.A*q + f)[:]
     end
-    return dg[:]
+    # minus sign because in DADP we consider -f instead of f  (max f = - min -f)
+    return -dg[:]
 end
 
+
+
+################################################################################
+# General oracle for decomposition
+################################################################################
 # oracle return a cost function `f` and a gradient function `grad!`
 # corresponding to the transporation problem.
-function oracle(pb::Grid, dadp::DADP)
+function oracle(pb::Grid, algo::AbstractDecompositionSolver)
     # take care: we aim at find a maximum (min f = - max -f )
-    f(λ) = - dadp.cost
+    f(x) = algo.cost
 
-    function grad!(λ, storage)
+    function grad!(x, storage)
         # update multiplier inside Grid `pb`
-        swap!(pb, λ)
+        swap!(pb, x)
         # resolve `pb` with these new multipliers
-        solve!(pb, dadp)
+        solve!(pb, algo)
         # simulate trajectories with updated value functions
-        simulate!(pb, dadp)
+        simulate!(pb, algo)
 
         # Then, compute subgradients!
-        copy!(storage, -∇g(pb, dadp))
+        copy!(storage, ∇g(pb, algo))
     end
 
     return f, grad!
