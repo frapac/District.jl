@@ -50,6 +50,7 @@ include("model/grid.jl")
 # ALGO
 include("algo/solvers.jl")
 # flow solver for graphs
+include("algo/sensitivity.jl")
 include("algo/flow.jl")
 # sddp solver
 include("algo/sddp.jl")

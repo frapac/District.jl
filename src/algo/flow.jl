@@ -25,7 +25,7 @@ function solve!(net::Network)
         @constraint(m, qp .>=  q)
         @constraint(m, qp .>= -q)
 
-        @objective(m, :Min, sum(k1*qp)  + k2*dot(q, q) +  dot(mul, net.A*q))
+        @objective(m, :Min, k1*sum(qp)  + k2*dot(q, q) +  dot(mul, net.A*q))
 
         # solve problem
         JuMP.solve(m)
@@ -39,15 +39,16 @@ function solve!(net::Network)
 end
 
 """Solve transport problem in primal."""
-function qsolve!(net::Network, flow)
+function qsolve!(net::Network)
     k1, k2 = net.k1, net.k2
 
     narcs = net.narcs
     qa = zeros(Float64, net.ntime-1, size(net.A, 2))
     pcost = 0.
+    flow = net.λ
 
     for t in 1:net.ntime-1
-        f = @view flow[:, t]
+        f = @view flow[t, :]
         # TODO: dry definition of problem to use hotstart
         m = Model(solver=get_solver())
         @variable(m, -net.maxflow[i] <= q[i=1:narcs] <= net.maxflow[i])
@@ -73,7 +74,7 @@ function qsolve!(net::Network, flow)
         qa[t, :] = getvalue(q)
 
         # update multiplier
-        net.λ[t, :] = getdual(eq)
+        net.F[t, :] = getdual(eq)
         pcost += getobjectivevalue(m)
     end
 
@@ -83,6 +84,7 @@ function qsolve!(net::Network, flow)
 end
 
 
+# TODO: update this function
 function admmsolve!(net::Network, λ, F, τ)
     k1, k2 = net.k1, net.k2
 

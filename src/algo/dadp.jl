@@ -2,6 +2,7 @@
 # District.jl
 ################################################################################
 # Implement DADP decomposition solver.
+# --- Price decomposition scheme ---
 # Design to solve graph problem, with interconnection balance.
 #  min_{F, Q} J_P(F) + J_T(Q) ,
 #      s.t. A Q + F = 0
@@ -25,7 +26,7 @@ mutable struct DADP <: AbstractDecompositionSolver
     # current flow in edges
     Q::Array{Float64}
     # solver to solve nodes subproblems
-    algo::AbstractSolver
+    algo::AbstractDPSolver
     # ???
     pb
     # Scenario
@@ -58,9 +59,9 @@ function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
 end
 
 # We need three ingredients to build oracle:
-#     i) solve! : once new multipliers are set, resolve nodes and edges
+#     i)   solve! : once new multipliers are set, resolve nodes and edges
 #                 problems and update value function.
-#     ii) simulate! : once value functions are obtained, simulate
+#     ii)  simulate! : once value functions are obtained, simulate
 #                     trajectories via Monte Carlo with relaxed problem.
 #     iii) ∇g : eventually, compute subgradient along previous trajectories.
 
@@ -89,7 +90,7 @@ function simulate!(pb::Grid, dadp::DADP)
     copy!(dadp.Q, pb.net.Q)
 end
 
-function ∇g(pb::Grid, dadp::DADP)
+function ∇f(pb::Grid, dadp::DADP)
     dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
     for t in 1:(dadp.ntime - 1)
         f = dadp.F[:, t]
@@ -105,22 +106,34 @@ end
 ################################################################################
 # General oracle for decomposition
 ################################################################################
+function _update!(pb, algo, x)
+    # update multiplier inside Grid `pb`
+    swap!(pb, x)
+    # resolve `pb` with these new multipliers
+    solve!(pb, algo)
+    # simulate trajectories with updated value functions
+    simulate!(pb, algo)
+end
+
 # oracle return a cost function `f` and a gradient function `grad!`
 # corresponding to the transporation problem.
 function oracle(pb::Grid, algo::AbstractDecompositionSolver)
-    # take care: we aim at find a maximum (min f = - max -f )
-    f(x) = algo.cost
+    xp = UInt64(0)
+    function f(x)
+        if hash(x) != xp
+            _update!(pb, algo, x)
+            xp = hash(x)
+        end
+        return algo.cost
+    end
 
     function grad!(x, storage)
-        # update multiplier inside Grid `pb`
-        swap!(pb, x)
-        # resolve `pb` with these new multipliers
-        solve!(pb, algo)
-        # simulate trajectories with updated value functions
-        simulate!(pb, algo)
-
+        if hash(x) != xp
+            _update!(pb, algo, x)
+            xp = hash(x)
+        end
         # Then, compute subgradients!
-        copy!(storage, ∇g(pb, algo))
+        copy!(storage, ∇f(pb, algo))
     end
 
     return f, grad!
