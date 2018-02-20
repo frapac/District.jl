@@ -12,7 +12,7 @@ Extract sensitivity of problem w.r.t. coupling constraints along `scenarios`.
 """
 function qsensitivity(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3})
     return sensitivity(sddp.spmodel, sddp.params, sddp.solverinterface,
-                       scenarios, :cons)
+                       scenarios, :coupling)
 end
 
 
