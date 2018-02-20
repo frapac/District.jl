@@ -1,0 +1,53 @@
+################################################################################
+# District.jl
+################################################################################
+# Extract sensitivity w.r.t. a given constraint.
+# Estimation by Monte Carlo sampling.
+################################################################################
+
+function sensitivity(model::StochDynamicProgramming.SPModel,
+                     param::StochDynamicProgramming.SDDPparameters,
+                     solverProblems::Vector{JuMP.Model},
+                     scenarios::Array{Float64},
+                     refcons::Symbol=:cons)
+
+
+    T = model.stageNumber
+    nb_forward = size(scenarios, 2)
+
+
+    stockTrajectories = zeros(T, nb_forward, model.dimStates)
+
+    np = length(solverProblems[1].ext[refcons])
+    sensitivity = zeros(T - 1, nb_forward, np)
+
+    # Set first value of stocks equal to x0:
+    for k in 1:nb_forward
+        stockTrajectories[1, k, :] = model.initialState
+    end
+
+    # Store costs of different scenarios in an array:
+    costs = zeros(nb_forward)
+
+    for t=1:T-1
+        for k = 1:nb_forward
+            # Collect current state and noise:
+            xt = stockTrajectories[t, k, :]
+            ξt = scenarios[t, k, :]
+
+            sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
+                                              solverProblems[t], t, xt, ξt)
+
+
+            # extract sensitivity
+            sensitivity[t, k, :] = JuMP.getdual(solverProblems[t].ext[refcons])
+            stockTrajectories[t+1, k, :] = sol.xf
+            # and the current cost:
+            costs[k] += sol.objval - sol.θ
+            if t==T-1
+                costs[k] += sol.θ
+            end
+        end
+    end
+    return costs, sensitivity
+end
