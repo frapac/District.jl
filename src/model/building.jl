@@ -155,6 +155,7 @@ function objective(house::House, xindex=0, uindex=0)
             # add hard coupling constraint
             m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.flow[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
+            expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
         else
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         end
