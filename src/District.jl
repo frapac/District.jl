@@ -56,6 +56,7 @@ include("algo/flow.jl")
 include("algo/sddp.jl")
 # dadp solver
 include("algo/dadp.jl")
+include("algo/padp.jl")
 
 ##########
 # SIMULATION

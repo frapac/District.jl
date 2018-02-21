@@ -26,12 +26,12 @@ ntimes(pb::Grid) = ntimesteps(pb.ts)
 
 
 # Build models inside `grid` for decomposition
-function build!(grid::Grid, xini::Dict)
+function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface)
     for d in grid.nodes
         price = zeros(Float64, ntimes(grid)-1)
         # instantiate connection interface
         # TODO: dry connection size
-        conn = PriceInterface(price, GraphConnection(6.))
+        conn = Interface(price, GraphConnection(6.))
         # add connection to particular device
         set!(d, conn)
         # build SP model inside `d`

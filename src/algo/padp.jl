@@ -43,12 +43,12 @@ function PADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     ntime = ntimesteps(pb.nodes[1].time)
 
     λ = zeros(Float64, nnodes, ntime-1)
-    μ = zeros(Float64, ntime-1, pb.net.narcs)
+    μ = zeros(Float64, nnodes, ntime-1)
     scen = [genscen(d.model, nsimu) for d in pb.nodes]
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    DADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
+    PADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
 end
 
 ################################################################################
@@ -76,15 +76,15 @@ function simulate!(pb::Grid, dadp::PADP)
     # add transportation cost
     dadp.cost += pb.net.cost
     # update Q flows inside DADP
-    copy!(dadp.μ, pb.net.F)
+    copy!(dadp.μ, pb.net.F')
 end
 
 function ∇f(pb::Grid, dadp::PADP)
     dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
     for t in 1:(dadp.ntime - 1)
         λ = dadp.λ[:, t]
-        μ = dadp.μ[t, :]
+        μ = dadp.μ[:, t]
         dg[t, :] = (λ - μ)[:]
     end
-    return df[:]
+    return dg[:]
 end

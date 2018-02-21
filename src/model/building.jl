@@ -152,6 +152,7 @@ function objective(house::House, xindex=0, uindex=0)
             u = m[:u]
             ifu = ncontrols(house) + uindex
             # TODO: do not consider these constraint in SDDP & assessment
+            # add hard coupling constraint
             m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.flow[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         else
@@ -310,6 +311,7 @@ end
 function getrealcost(house::House)
     bill = house.billing
 
+    # Note: we do not consider price decomposition cost in real cost
     function real_cost(t, x, u, w)
         cost = 0.
         if ~isa(bill.elec, NoneElecPrice)
@@ -388,7 +390,7 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 # DECOMPOSITION
 ################################################################################
 # TODO: here, setting Interface MUST happened just before building model
-function set!(house::House, conn::PriceInterface)
+function set!(house::House, conn::AbstractInterface)
     house.conn = conn
     add!(house, conn.linker)
 end

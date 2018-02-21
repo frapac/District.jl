@@ -29,7 +29,8 @@ function sensitivity(model::StochDynamicProgramming.SPModel,
 
     stockTrajectories = zeros(T, nb_forward, model.dimStates)
 
-    np = length(solverProblems[1].ext[refcons])
+    cons = solverProblems[1].ext[refcons]
+    np = isa(cons, SimpleVector) ? length(cons) : 1
     sensitivity = zeros(T - 1, nb_forward, np)
 
     # Set first value of stocks equal to x0:

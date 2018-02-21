@@ -25,6 +25,7 @@ swap!(p::PriceInterface, v::Array{Float64}) = copy!(p.price, v)
 # Inteface for primal decomposition
 struct FlowInterface <: AbstractInterface
     flow::Array{Float64}
+    linker::AbstractConnection
 end
 
 swap!(p::FlowInterface, v::Array{Float64}) = copy!(p.flow, v)
