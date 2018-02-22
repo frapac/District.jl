@@ -69,7 +69,14 @@ function simulate!(pb::Grid, dadp::PADP)
     for (id, d) in enumerate(pb.nodes)
         c, λ = qsensitivity(dadp.models[d.name], dadp.scen[id])
         # take average of sensitivity wrt flows for Node `d`
-        dadp.λ[id, :] = mean(λ[:, :, end], 2)
+        avgλ = mean(λ[:, :, end], 2)
+        # sometimes, inner solver is unable to return the dual value
+        # corresponding to the coupling constraint, and return NaN.
+        # When this happened, we replace the NaN values by their
+        # previous estimation, stored in dadp.λ
+        avgλ[isnan.(avgλ)] = dadp.λ[id, vec(isnan.(avgλ))]
+        # store new sensitivity
+        dadp.λ[id, :] = avgλ
         # take average of costs
         dadp.cost += mean(c)
     end
