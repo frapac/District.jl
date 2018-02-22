@@ -27,8 +27,6 @@ mutable struct DADP <: AbstractDecompositionSolver
     Q::Array{Float64}
     # solver to solve nodes subproblems
     algo::AbstractDPSolver
-    # ???
-    pb
     # Scenario
     scen::Array
     # number of Monte Carlo simulations to estimate gradient
@@ -59,7 +57,7 @@ function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    DADP(ntime, Inf, F, Q, algo, nothing, scen, nsimu, nit, mod)
+    DADP(ntime, Inf, F, Q, algo, scen, nsimu, nit, mod)
 end
 
 # We need three ingredients to build oracle:

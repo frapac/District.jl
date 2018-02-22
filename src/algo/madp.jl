@@ -17,17 +17,15 @@ mutable struct MADP <: AbstractDecompositionSolver
     # current price / nodes
     λ::Array{Float64, 2}
     # current price / edges
-    μ::Array{Float64}
+    V::Array{Float64}
     # solver to solve nodes subproblems
     algo::AbstractDPSolver
-    # ???
-    pb
     # Scenario
     scen::Array
     # number of Monte Carlo simulations to estimate gradient
     nsimu::Int
     # maximum number of iterations
-    nit::Int
+    maxit::Int
     # models stores SDDPInterface in dedicated Dictionnary
     models::Dict
 end
@@ -38,7 +36,11 @@ end
 
 Build MADP solver.
 """
-function MADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+function MADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), maxit=50)
+    if ~checkconsistency(pb, FlowInterface)
+        error("Wrong interfaces inside `pb.nodes`. Use `FlowInterface`
+              for quantities decomposition")
+    end
     nnodes = length(pb.nodes)
     ntime = ntimesteps(pb.nodes[1].time)
 
@@ -48,7 +50,7 @@ function MADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    MADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
+    MADP(ntime, Inf, λ, μ, algo, scen, nsimu, maxit, mod)
 end
 
 ################################################################################
@@ -64,49 +66,37 @@ function solve!(pb::Grid, dadp::MADP)
     solve!(pb.net)
 end
 
-# TODO: dry
 function simulate!(pb::Grid, dadp::MADP)
-    dadp.cost = 0.
-    for (id, d) in enumerate(pb.nodes)
-        c, λ = qsensitivity(dadp.models[d.name], dadp.scen[id])
-        # take average of sensitivity wrt flows for Node `d`
-        avgλ = mean(λ[:, :, end], 2)
-        # sometimes, inner solver is unable to return the dual value
-        # corresponding to the coupling constraint, and return NaN.
-        # When this happened, we replace the NaN values by their
-        # previous estimation, stored in dadp.λ
-        avgλ[isnan.(avgλ)] = dadp.λ[id, vec(isnan.(avgλ))]
-        # store new sensitivity
-        dadp.λ[id, :] = avgλ
-        # take average of costs
-        dadp.cost += mean(c)
-    end
-
+    # production cost
+    dadp.cost = dualsimulation!(pb, dadp)
     # add transportation cost
     dadp.cost += pb.net.cost
-    # update Q flows inside DADP
-    copy!(dadp.μ, pb.net.F')
 end
 
+# TODO: move in network.jl
+flowallocation(pb::Grid) = flowallocation(pb.net)
 
 # Solve problem with a fixed point algorithm.
-function solve!(pb::Grid, algo:MADP, x0::Vector{Float64})
-
+function solve!(pb::Grid, algo::MADP, V0::Vector{Float64}, μ0::Vector{Float64})
     # alloc
-    V
+    V = copy(V0)
     # price
+    μ = copy(μ0)
 
-    for ???
-        swap!(pb, x)
+    for nit = 1:algo.maxit
+        prodswap!(pb, V)
+        transswap!(pb, μ)
         # resolve
         solve!(pb, algo)
         # simulate trajectories with updated value functions
         simulate!(pb, algo)
 
-        V = A*pb.net.Q
+        # update allocation and transport price
+        V[:] = -flowallocation(pb)
+        μ[:] = (algo.λ')[:]
+        algo.V[:] = V[:]
 
+        @printf("\t %i \t %.6e\n", nit, algo.cost)
     end
-
-    return res
+    return V, μ
 end
-

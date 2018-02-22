@@ -39,16 +39,21 @@ function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface)
     end
 end
 
-# update graph exchange in nodes subproblems
-function swap!(pb::Grid, mul::Vector{Float64})
+# swap production problem
+function prodswap!(pb::Grid, mul::Vector{Float64})
     ntime = ntimes(pb) - 1
     for (id, d) in enumerate(pb.nodes)
         s1 = (id-1) * ntime + 1
         s2 = id * ntime
         swap!(d, mul[s1:s2])
     end
-    # swap transport problem
-    swap!(pb.net, mul)
+end
+# swap transport problem
+transswap!(pb::Grid, mul::Vector{Float64}) = swap!(pb.net, mul)
+# update graph exchange in nodes subproblems
+function swap!(pb::Grid, mul::Vector{Float64})
+    prodswap!(pb, mul)
+    transswap!(pb, mul)
 end
 
 # check consistency of grid with decomosition algorithm

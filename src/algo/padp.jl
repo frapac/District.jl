@@ -20,8 +20,6 @@ mutable struct PADP <: AbstractDecompositionSolver
     μ::Array{Float64}
     # solver to solve nodes subproblems
     algo::AbstractDPSolver
-    # ???
-    pb
     # Scenario
     scen::Array
     # number of Monte Carlo simulations to estimate gradient
@@ -52,7 +50,26 @@ function PADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    PADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
+    PADP(ntime, Inf, λ, μ, algo, scen, nsimu, nit, mod)
+end
+
+function dualsimulation!(pb::Grid, dadp)
+    cost = 0.
+    for (id, d) in enumerate(pb.nodes)
+        c, λ = qsensitivity(dadp.models[d.name], dadp.scen[id])
+        # take average of sensitivity wrt flows for Node `d`
+        avgλ = mean(λ[:, :, end], 2)
+        # sometimes, inner solver is unable to return the dual value
+        # corresponding to the coupling constraint, and return NaN.
+        # When this happened, we replace the NaN values by their
+        # previous estimation, stored in dadp.λ
+        avgλ[isnan.(avgλ)] = dadp.λ[id, vec(isnan.(avgλ))]
+        # store new sensitivity
+        dadp.λ[id, :] = avgλ
+        # take average of costs
+        cost += mean(c)
+    end
+    return cost
 end
 
 ################################################################################
@@ -69,22 +86,8 @@ function solve!(pb::Grid, dadp::PADP)
 end
 
 function simulate!(pb::Grid, dadp::PADP)
-    dadp.cost = 0.
-    for (id, d) in enumerate(pb.nodes)
-        c, λ = qsensitivity(dadp.models[d.name], dadp.scen[id])
-        # take average of sensitivity wrt flows for Node `d`
-        avgλ = mean(λ[:, :, end], 2)
-        # sometimes, inner solver is unable to return the dual value
-        # corresponding to the coupling constraint, and return NaN.
-        # When this happened, we replace the NaN values by their
-        # previous estimation, stored in dadp.λ
-        avgλ[isnan.(avgλ)] = dadp.λ[id, vec(isnan.(avgλ))]
-        # store new sensitivity
-        dadp.λ[id, :] = avgλ
-        # take average of costs
-        dadp.cost += mean(c)
-    end
-
+    # get sensitivity of production problem
+    dadp.cost = dualsimulation!(pb, dadp)
     # add transportation cost
     dadp.cost += pb.net.cost
     # update Q flows inside DADP

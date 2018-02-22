@@ -45,6 +45,8 @@ function Network(ts, A)
     return Network(ntime, Inf, Q, A, narcs, maxflow, λ, F, 0., 1e-2)
 end
 
+nnodes(net::Network) = size(net.A, 1)
+
 "Set multipliers inside Network `net`."
 swap!(net::Network, mul) = net.λ[:] = mul
 
@@ -70,3 +72,12 @@ function buildincidence{T}(connexion::Matrix{T})
 end
 
 getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]
+
+function flowallocation(net::Network)
+    dg = zeros(Float64, net.ntime-1, nnodes(net))
+    for t in 1:(net.ntime - 1)
+        q = net.Q[t, :]
+        dg[t, :] = (net.A*q)[:]
+    end
+    return dg[:]
+end
