@@ -51,6 +51,11 @@ function swap!(pb::Grid, mul::Vector{Float64})
     swap!(pb.net, mul)
 end
 
+# check consistency of grid with decomosition algorithm
+function checkconsistency(pb::Grid, Interface::Type)
+    chck1 = false ∉ isa.([m.conn for m in pb.nodes], Interface)
+    return chck1
+end
 
 ################################################################################
 # Build global problem corresponding to Grid

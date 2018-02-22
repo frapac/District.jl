@@ -46,6 +46,10 @@ end
 Build DADP solver.
 """
 function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+    if ~checkconsistency(pb, PriceInterface)
+        error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
+              for price decomposition")
+    end
     nnodes = length(pb.nodes)
     ntime = ntimesteps(pb.nodes[1].time)
 

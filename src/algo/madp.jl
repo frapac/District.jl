@@ -1,15 +1,15 @@
 ################################################################################
 # District.jl
 ################################################################################
-# Implement PADP decomposition solver.
-# --- Quantities decomposition scheme ---
+# Implement MADP decomposition solver.
+# --- Decomposition by prediction scheme ---
 ################################################################################
 
 
-export PADP
+export MADP
 
 
-mutable struct PADP <: AbstractDecompositionSolver
+mutable struct MADP <: AbstractDecompositionSolver
     # number of timesteps
     ntime::Int
     # current dual cost
@@ -34,15 +34,11 @@ end
 
 
 """
-    PADP(pb::Grid)
+    MADP(pb::Grid)
 
-Build PADP solver.
+Build MADP solver.
 """
-function PADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
-    if ~checkconsistency(pb, FlowInterface)
-        error("Wrong interfaces inside `pb.nodes`. Use `FlowInterface`
-              for quantities decomposition")
-    end
+function MADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     nnodes = length(pb.nodes)
     ntime = ntimesteps(pb.nodes[1].time)
 
@@ -52,23 +48,24 @@ function PADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    PADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
+    MADP(ntime, Inf, λ, μ, algo, nothing, scen, nsimu, nit, mod)
 end
 
 ################################################################################
 # The three pilars of oracle
 ################################################################################
 
-function solve!(pb::Grid, dadp::PADP)
+function solve!(pb::Grid, dadp::MADP)
     # solve production subproblems
     for d in pb.nodes
         dadp.models[d.name] = solve(d, dadp.algo)
     end
-    # solve transport problem
-    qsolve!(pb.net)
+    # solve transport problem in dual
+    solve!(pb.net)
 end
 
-function simulate!(pb::Grid, dadp::PADP)
+# TODO: dry
+function simulate!(pb::Grid, dadp::MADP)
     dadp.cost = 0.
     for (id, d) in enumerate(pb.nodes)
         c, λ = qsensitivity(dadp.models[d.name], dadp.scen[id])
@@ -91,12 +88,25 @@ function simulate!(pb::Grid, dadp::PADP)
     copy!(dadp.μ, pb.net.F')
 end
 
-function ∇f(pb::Grid, dadp::PADP)
-    dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
-    for t in 1:(dadp.ntime - 1)
-        λ = dadp.λ[:, t]
-        μ = dadp.μ[:, t]
-        dg[t, :] = (λ - μ)[:]
+
+# Solve problem with a fixed point algorithm.
+function solve!(pb::Grid, algo:MADP, x0::Vector{Float64})
+
+    # alloc
+    V
+    # price
+
+    for ???
+        swap!(pb, x)
+        # resolve
+        solve!(pb, algo)
+        # simulate trajectories with updated value functions
+        simulate!(pb, algo)
+
+        V = A*pb.net.Q
+
     end
-    return dg[:]
+
+    return res
 end
+
