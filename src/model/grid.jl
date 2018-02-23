@@ -26,12 +26,12 @@ ntimes(pb::Grid) = ntimesteps(pb.ts)
 
 
 # Build models inside `grid` for decomposition
-function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface)
+function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface;
+                maxflow=6.)
     for d in grid.nodes
         price = zeros(Float64, ntimes(grid)-1)
         # instantiate connection interface
-        # TODO: dry connection size
-        conn = Interface(price, GraphConnection(6.))
+        conn = Interface(price, GraphConnection(maxflow))
         # add connection to particular device
         set!(d, conn)
         # build SP model inside `d`
@@ -148,7 +148,6 @@ function builddynamic(pb::Grid)
         params["pext"] = pext
 
         # parse dynamics of nodes
-        # TODO: w index in builder
         ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)
         xindex += nstocks(dev)
         uindex += ncontrols(dev)
@@ -202,7 +201,6 @@ end
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
-# TODO: clean arguments
 function buildlaws(pb::Grid, nscen=100, nbins=10)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))
@@ -236,7 +234,6 @@ function getrealcost(pb::Grid)
 end
 
 # TODO: clean definition of final cost (again!!!)
-# TODO: not a clean implementation...
 function buildfcost(pb::Grid)
     function final_cost(model, m)
         alpha = m[:alpha]

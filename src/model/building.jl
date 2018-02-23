@@ -66,7 +66,6 @@ function build!(house::House, x0::Vector{Float64})
     xb = xbounds(house)
     ub = ubounds(house)
 
-    # TODO: build linker here
     buildlink!(house)
 
     # build probability laws
@@ -340,7 +339,6 @@ realfinalcost(xf) = PENAL_TANK*max(0., 2. - xf[2])
 ################################################################################
 join!(house::House, din::AbstractModel, dout::AbstractModel) = push!(house.links, Link(din, dout))
 # TODO: use thermalload instead
-# TODO: link! does not happen at parse time (ie when build! is called)
 # We can link EHWT only to DHW demands
 function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty, uind::Int, wind::Int)
     indw = windex(house, w) + wind
@@ -391,6 +389,7 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 # DECOMPOSITION
 ################################################################################
 # TODO: here, setting Interface MUST happened just before building model
+# TODO: raise error if devices added after Interface
 function set!(house::House, conn::AbstractInterface)
     house.conn = conn
     add!(house, conn.linker)

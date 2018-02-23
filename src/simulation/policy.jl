@@ -180,7 +180,6 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
         @constraint(m, policy.V[t+1].betas[nc] + dot(lambda, xf) <= alpha)
     end
 
-    # TODO: add equality constraint
     if ~isnull(model.equalityConstraints)
         @constraint(m, get(model.equalityConstraints)(t, x, u, w) .== 0)
     end
@@ -189,7 +188,7 @@ function buildproblem!(policy::HereAndNowDP, model, t::Int)
     if t == ntime(policy) - 1
         model.finalCost(model, m)
     end
-    # TODO: fix final costs in definition of costs
+
     policy.problem = m
 end
 
@@ -230,7 +229,6 @@ function buildproblem!(policy::WaitAndSeeDP, model, t::Int)
         end
     end
 
-    # TODO: add equality constraint
     if ~isnull(model.equalityConstraints)
         @constraint(m, get(model.equalityConstraints)(t, x, u, w) .== 0)
     end

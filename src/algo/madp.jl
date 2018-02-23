@@ -94,7 +94,11 @@ function solve!(pb::Grid, algo::MADP, V0::Vector{Float64}, μ0::Vector{Float64})
         # update allocation and transport price
         V[:] = -flowallocation(pb)
         μ[:] = (algo.λ')[:]
-        algo.V[:] = V[:]
+        μ[μ .> 0] = 0
+
+        #= if length(μ[μ .> 0.]) > 0 =#
+        #=     break =#
+        #= end =#
 
         @printf("\t %i \t %.6e\n", nit, algo.cost)
     end

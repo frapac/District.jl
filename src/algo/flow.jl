@@ -14,8 +14,6 @@ function solve!(net::Network)
     flows = zeros(Float64, net.ntime-1, size(net.A, 2))
 
     for t in 1:net.ntime-1
-
-        # TODO: dry definition of problem to use hotstart
         m = Model(solver=get_solver())
         mul = @view λ[t, :]
         @variable(m, -net.maxflow[i] <= q[i=1:net.narcs] <= net.maxflow[i])
@@ -49,7 +47,6 @@ function qsolve!(net::Network)
 
     for t in 1:net.ntime-1
         f = @view flow[t, :]
-        # TODO: dry definition of problem to use hotstart
         m = Model(solver=get_solver())
         @variable(m, -net.maxflow[i] <= q[i=1:narcs] <= net.maxflow[i])
 

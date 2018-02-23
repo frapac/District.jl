@@ -33,16 +33,22 @@ mutable struct Network <: AbstractNetwork
     k1::Float64
     k2::Float64
 end
-function Network(ts, A)
+function Network(ts, A; qmax=6., k1=0., k2=1e-2)
     ntime = ntimesteps(ts)
     nnodes, narcs = size(A)
     λ = zeros(Float64, ntime-1, nnodes)
     F = zeros(Float64, ntime-1, nnodes)
     Q = zeros(Float64, ntime-1, narcs)
-    # TODO: dry
-    maxflow = 6 * ones(Float64, narcs)
+    # Build max flow through arcs
+    if isa(qmax, Float64)
+        maxflow = qmax * ones(Float64, narcs)
+    elseif isa(qmax, Vector{Float64}) && (length(qmax) == narcs)
+        maxflow = copy(qmax)
+    else
+        error("Unvalid `qmax`: must be a Float64 or a Vector with size `narcs`")
+    end
 
-    return Network(ntime, Inf, Q, A, narcs, maxflow, λ, F, 0., 1e-2)
+    return Network(ntime, Inf, Q, A, narcs, maxflow, λ, F, k1, k2)
 end
 
 nnodes(net::Network) = size(net.A, 1)
