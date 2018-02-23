@@ -127,15 +127,16 @@ using District, Scenarios
     @testset "Graph Interface" begin
         conn = GraphConnection(6.)
 
-        price = zeros(Float64, 96)
-        p = PriceInterface(price, conn)
-        @test isa(p, District.AbstractInterface)
-        price2 = ones(Float64, 96)
-        District.swap!(p, price2)
-        @test p.price == price2
 
-        f = FlowInterface(zeros(Float64, 96))
-        @test isa(f, District.AbstractInterface)
+        for Interface in [PriceInterface, FlowInterface]
+            price = zeros(Float64, 96)
+            p = Interface(price, conn)
+            @test isa(p, District.AbstractInterface)
+            price2 = ones(Float64, 96)
+            District.swap!(p, price2)
+            @test p.values == price2
+        end
+
     end
 
     @testset "Irradiation" begin

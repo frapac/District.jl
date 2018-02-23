@@ -37,9 +37,10 @@ srand(2713)
     V = sddp.bellmanfunctions
     dppol = District.HereAndNowDP(V)
 
-    for pol in [mpcpol, dppol]
+    for (pol, vals) in zip([mpcpol, dppol], [14.2567, 15.4450])
         res = District.simulate(sim, pol)
         @test isa(res, SimulationResult)
+        @test .25*mean(res.costs) ≈ vals  atol=1e-4
         println(res)
     end
 end

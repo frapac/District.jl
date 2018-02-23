@@ -73,7 +73,6 @@ function simulate!(pb::Grid, dadp::MADP)
     dadp.cost += pb.net.cost
 end
 
-# TODO: move in network.jl
 flowallocation(pb::Grid) = flowallocation(pb.net)
 
 # Solve problem with a fixed point algorithm.

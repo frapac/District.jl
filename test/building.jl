@@ -76,16 +76,17 @@ using District
         house = load(ts, ElecHouse())
         # define connection
         g = GraphConnection(6.)
-        price = zeros(Float64, District.ntimesteps(ts))
-        conn = PriceInterface(price, g)
-        # add connection to house
-        District.set!(house, conn)
-        @test house.conn == conn
-        @test District.hasdevice(house, GraphConnection)
+        for Interface in [FlowInterface, PriceInterface]
+            price = zeros(Float64, District.ntimesteps(ts))
+            conn = FlowInterface(price, g)
+            # add connection to house
+            District.set!(house, conn)
+            @test house.conn == conn
+            @test District.hasdevice(house, GraphConnection)
 
-        price2 = ones(Float64, District.ntimesteps(ts))
-        District.swap!(house, price2)
-        @test house.conn.price == price2
+            price2 = ones(Float64, District.ntimesteps(ts))
+            District.swap!(house, price2)
+            @test house.conn.values == price2
+        end
     end
 end
-
