@@ -121,6 +121,7 @@ using District, Scenarios
             @test length(District.ubounds(st)) == District.ncontrols(st)
             ex = District.parsedevice(st, 1, 1, .25, params)
             @test isa(ex, Vector{Expr})
+            @test isa(District.getname(st), String)
         end
     end
 

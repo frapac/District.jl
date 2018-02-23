@@ -70,6 +70,9 @@ function ubounds end
 "Specify whether device is stock"
 function isstock end
 
+"Get name of device."
+function getname end
+
 """
     reset!(d::AbstractDevice)
 
@@ -85,6 +88,7 @@ elecload(d::AbstractDevice, uindex::Int) = :(0.)
 thermalload(d::AbstractDevice, uindex::Int) = :(0.)
 gasload(d::AbstractDevice, uindex::Int) = :(0.)
 reset!(d::AbstractDevice) = nothing
+getname(d::AbstractDevice) = "Undefined"
 
 ################################################################################
 # Battery
@@ -122,6 +126,7 @@ nstates(bat::Battery) = 1
 ncontrols(bat::Battery) = 2
 xbounds(bat::Battery) = Tuple{Float64, Float64}[(bat.binf, bat.bup)]
 ubounds(bat::Battery) = Tuple{Float64, Float64}[(0., bat.δb), (0., bat.δb)]
+getname(bat::Battery) = "Battery"
 
 
 ################################################################################
@@ -173,6 +178,7 @@ nstates(hwt::ElecHotWaterTank) = 1
 ncontrols(hwt::ElecHotWaterTank) = 1
 xbounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ElecHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.power)]
+getname(hwt::ElecHotWaterTank) = "EHWT"
 
 
 ################################################################################
@@ -224,6 +230,7 @@ nstates(hwt::ThermalHotWaterTank) = 1
 ncontrols(hwt::ThermalHotWaterTank) = 0
 xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[]
+getname(hwt::ThermalHotWaterTank) = "THWT"
 
 ################################################################################
 # R6C2 model
@@ -344,6 +351,7 @@ nstates(thm::R6C2) = 2
 ncontrols(thm::R6C2) = 0
 xbounds(thm::R6C2) = Tuple{Float64, Float64}[(-50., 100.), (-50., 100.)]
 ubounds(thm::R6C2) = Tuple{Float64, Float64}[]
+getname(thm::R6C2) = "Thermal Enveloppe"
 
 
 ################################################################################
@@ -379,6 +387,7 @@ nstates(chp::MicroCHP) = 0
 ncontrols(chp::MicroCHP) = 1
 xbounds(chp::MicroCHP) = Tuple{Float64, Float64}[]
 ubounds(chp::MicroCHP) = Tuple{Float64, Float64}[(0., 1.)]
+getname(chp::MicroCHP) = "μCHP"
 
 
 
@@ -398,6 +407,7 @@ nstates(h::ElecHeater) = 0
 ncontrols(h::ElecHeater) = 1
 xbounds(h::ElecHeater) = Tuple{Float64, Float64}[]
 ubounds(h::ElecHeater) = [(0., h.maxheating)]
+getname(h::ElecHeater) = "Elec Heater"
 
 
 # TODO: add dynamics of ThermalHeater
@@ -410,6 +420,7 @@ nstates(h::ThermalHeater) = 0
 ncontrols(h::ThermalHeater) = 1
 xbounds(h::ThermalHeater) = Tuple{Float64, Float64}[]
 ubounds(h::ThermalHeater) = [(0., h.maxheating)]
+getname(h::ThermalHeater) = "Thermal Heater"
 
 
 ################################################################################
@@ -429,6 +440,7 @@ nstates(conn::GraphConnection) = 0
 ncontrols(conn::GraphConnection) = 1
 xbounds(conn::GraphConnection) = Tuple{Float64, Float64}[]
 ubounds(conn::GraphConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
+getname(conn::GraphConnection) = "Import"
 
 
 ################################################################################
