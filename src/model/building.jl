@@ -396,3 +396,19 @@ function set!(house::House, conn::AbstractInterface)
 end
 
 swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)
+
+
+################################################################################
+# PRINT
+################################################################################
+function show(io::IO, h::House)
+    println("="^30)
+    println("House $(h.name)")
+    println("="^30)
+    println("Available devices")
+    println("-"^30)
+    for d in h.devices
+        println("- ", getname(d))
+    end
+    println("="^30)
+end

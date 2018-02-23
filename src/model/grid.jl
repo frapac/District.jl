@@ -270,3 +270,13 @@ function getrealfinalcost(pb::Grid)
     end
     return fcost
 end
+
+################################################################################
+# PRINT
+################################################################################
+function show(io::IO, pb::Grid)
+    println("Grid with ", nnodes(pb), " nodes.")
+    for n in pb.nodes
+        println("- Node ", n.name, " (n stocks: ", nstocks(n),")")
+    end
+end

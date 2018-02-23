@@ -13,6 +13,8 @@ using JuMP
 using Scenarios, StochDynamicProgramming
 using JSON, ProgressMeter
 
+import Base: show
+
 WD = pwd()
 
 

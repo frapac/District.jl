@@ -7,7 +7,6 @@
 ################################################################################
 
 export Simulator, SimulationResult
-import Base: show
 
 
 ################################################################################
@@ -27,6 +26,8 @@ end
 ################################################################################
 # Simulator
 struct Simulator
+    # names of states, controls and uncertainties
+    names::Dict
     # time period considered
     ts::TimeSpan
     # SP Model to simulate
@@ -49,20 +50,23 @@ end
 Build Simulator corresponding to Node `n` and to `nassess` scenarios.
 """
 function Simulator(n::AbstractNode, nassess::Int)
+    xname, uname, wname = getcorrespondance(n)
+    names = Dict(:x=>xname, :u=>uname, :w=>wname)
     ts = n.time
     scen = genassessments(ts, n.noises, nassess)
-    return Simulator(ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
+    return Simulator(names, ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
 end
 
 
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
                    generation="reduction", nbins=10, noptscen=100)
+
     ts = pb.ts
     scen = genassessments(pb, nassess)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
-    return Simulator(ts, spmodel, scen, spmodel.dynamics,
+    return Simulator(Dict(), ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end
 
@@ -122,4 +126,38 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
     end
 
     return SimulationResult(costs, stocks, controls)
+end
+
+
+################################################################################
+# UTILS
+################################################################################
+function getcorrespondance(h::AbstractNode)
+    xname = String[]
+    uname = String[]
+    wname = String[]
+
+    for n in h.devices
+        nx = nstates(n)
+        nu = ncontrols(n)
+        push!(xname, fill(getname(n), nx)...)
+        push!(uname, fill(getname(n), nu)...)
+    end
+
+    for w in h.noises
+        nw = nnoise(w)
+        push!(wname, fill(getname(w), nw)...)
+    end
+
+    return xname, uname, wname
+end
+
+
+function getlabel(sim::Simulator, k::Symbol)
+    names = sim.names[k]
+    println("="^30)
+    for (iix, n) in enumerate(names)
+        println("$k[$iix]: $n")
+    end
+    println("="^30)
 end

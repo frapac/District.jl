@@ -59,6 +59,9 @@ specified in AbstractTimeSpan `ts`.
 """
 function fit end
 
+"Get name of uncertainty."
+getname(w::AbstractUncertainty) = "Undef"
+
 
 ################################################################################
 # Demands Uncertainties
@@ -95,6 +98,7 @@ optscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int) = _loadnoise(d, ts, 1
 
 elecload(d::Demands, windex) = :(w[$windex])
 nnoise(d::Demands) = 2
+getname(d::Demands) = "Demands"
 
 function genscenarios(d::Demands, ts::AbstractTimeSpan, nscen::Int)
     @assert 1 <= nscen <= 1000
@@ -126,6 +130,7 @@ function loadnoise(::PVProduction, ts::AbstractTimeSpan) end
 
 elecload(p::PVProduction, windex) = :(-w[$windex])
 nnoise(p::PVProduction) = 1
+getname(pv::PVProduction) = "Solar panels"
 
 
 function genscenarios(pv::PVProduction, ts::AbstractTimeSpan, nscen::Int)
