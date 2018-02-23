@@ -61,15 +61,20 @@ end
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
                    generation="reduction", nbins=10, noptscen=100)
-
+    xname, uname, wname = getcorrespondance(pb)
+    names = Dict(:x=>xname, :u=>uname, :w=>wname)
     ts = pb.ts
     scen = genassessments(pb, nassess)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
-    return Simulator(Dict(), ts, spmodel, scen, spmodel.dynamics,
+    return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end
 
+function show(io::IO, sim::Simulator)
+    println("* Simulation period:  day $(sim.ts.day) (ndays: $(sim.ts.ndays))")
+    println("* Number of scenarios: ", size(sim.scenarios, 2))
+end
 
 
 ################################################################################
@@ -148,6 +153,23 @@ function getcorrespondance(h::AbstractNode)
         nw = nnoise(w)
         push!(wname, fill(getname(w), nw)...)
     end
+
+    return xname, uname, wname
+end
+
+function getcorrespondance(pb::Grid)
+    xname = String[]
+    uname = String[]
+    wname = String[]
+
+    for (iin, n) in enumerate(pb.nodes)
+        xn, un, wn = getcorrespondance(n)
+        push!(xname, ("Node $iin: " .* xn)...)
+        push!(uname, ("Node $iin: " .* un)...)
+        push!(wname, ("Node $iin: " .* wn)...)
+    end
+
+    # TODO: add connection Q to uname
 
     return xname, uname, wname
 end
