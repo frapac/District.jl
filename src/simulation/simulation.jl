@@ -169,7 +169,12 @@ function getcorrespondance(pb::Grid)
         push!(wname, ("Node $iin: " .* wn)...)
     end
 
-    # TODO: add connection Q to uname
+    for edge in 1:narcs(pb)
+        pos = find(x->(x!=0), pb.net.A[:, edge])
+        # one edge joins only two nodes
+        @assert length(pos) == 2
+        push!(uname, ("Connection $(pos[1]) <--> $(pos[2])"))
+    end
 
     return xname, uname, wname
 end

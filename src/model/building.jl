@@ -143,7 +143,7 @@ function objective(house::House, xindex=0, uindex=0)
             u = m[:u]
             ifu = ncontrols(house) + uindex
             push!(vals, u[ifu])
-            push!(coefs, house.conn.price[t])
+            push!(coefs, house.conn.values[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
         elseif isa(house.conn, FlowInterface)
@@ -152,7 +152,7 @@ function objective(house::House, xindex=0, uindex=0)
             ifu = ncontrols(house) + uindex
             # TODO: do not consider these constraint in SDDP & assessment
             # add hard coupling constraint
-            m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.flow[t])
+            m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.values[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
         else
