@@ -10,15 +10,48 @@
 export ADMM
 
 
-struct ADMM <: AbstractSolver
-    niter::Int
-    approx::Symbol
+struct ADMM <: AbstractDecompositionSolver
+    # number of timesteps
+    ntime::Int
+    # current dual cost
+    cost::Float64
+    # current flow in nodes
+    F::Array{Float64, 2}
+    # current flow in edges
+    Q::Array{Float64}
+    # solver to solve nodes subproblems
+    algo::AbstractDPSolver
+    # Scenario
+    scen::Array
+    # quad penalty term
+    τ::Float64
     # stopping criterion
     rtol::Float64
     gtol::Float64
     nsimu::Int
-    warmstart::Bool
-    penalty::Float64
+    nit::Int
+    models::Dict()
+end
+"""
+    ADMM(pb::Grid)
+
+Build ADMM solver.
+"""
+function ADMM(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), rtol=1e-2, gtol=1e-2, tau=1.)
+    if ~checkconsistency(pb, QuadInterface)
+        error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
+              for price decomposition")
+    end
+    nnodes = length(pb.nodes)
+    ntime = ntimesteps(pb.nodes[1].time)
+
+    F = zeros(Float64, nnodes, ntime-1)
+    Q = zeros(Float64, ntime-1, pb.net.narcs)
+    scen = [genscen(d.model, nsimu) for d in pb.nodes]
+    # initiate mod with empty dictionnary
+    mod = Dict()
+
+    ADMM(ntime, Inf, F, Q, algo, scen, tau, rtol, gtol, nsimu, nit, mod)
 end
 
 struct ADMMResults{T}
@@ -28,6 +61,42 @@ struct ADMMResults{T}
     trace::Vector{T}
     f_calls::Int
     exectime::Vector{Float64}
+end
+
+function solve!(pb::Grid, dadp::ADMM)
+    # solve production subproblems
+    for d in pb.nodes
+        dadp.models[d.name] = solve(d, dadp.algo)
+    end
+    # solve transport problem with augmented Lagrangian
+    admmsolve!(pb.net, dadp.F, dadp.τ)
+end
+
+function simulate!(pb::Grid, dadp::ADMM)
+    dadp.cost = 0.
+    for (id, d) in enumerate(pb.nodes)
+        c, _, u = StochDynamicProgramming.simulate(dadp.models[d.name], dadp.scen[id])
+        # take average of importation flows for Node `d`
+        dadp.F[id, :] = mean(u[:, :, end], 2)
+        # take average of costs
+        dadp.cost -= mean(c)
+    end
+
+    # add transportation cost
+    dadp.cost -= pb.net.cost
+    # update Q flows inside DADP
+    copy!(dadp.Q, pb.net.Q)
+end
+
+function ∇f(pb::Grid, dadp::ADMM)
+    dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
+    for t in 1:(dadp.ntime - 1)
+        f = dadp.F[:, t]
+        q = dadp.Q[t, :]
+        dg[t, :] = (pb.net.A*q + f)[:]
+    end
+    # minus sign because in DADP we consider -f instead of f  (max f = - min -f)
+    return -dg[:]
 end
 
 
@@ -54,10 +123,8 @@ function solve!(pb::Grid, xini::Vector{Float64}, solver::ADMM; verbose=false)
 
     for it in 1:solver.niter
         tic()
-        # reshape multiplier
-        mul = reshape(λ, nnodes(pb), ntimes(pb)-1)
-
-        swap!(pb, mul, F, Q)
+        # TODO: add multiswap for grids
+        swap!(pb, λ, F)
         solve!(pb, solver)
         simulate!(pb, solver)
 
@@ -66,13 +133,13 @@ function solve!(pb::Grid, xini::Vector{Float64}, solver::ADMM; verbose=false)
         z = qflow(pb, Q)[:]
 
         # update multiplier
-        λ += solver.penalty*equilibrium
+        λ -= solver.τ*equilibrium
 
         # stopping criterion
         ## primal residual
         ϵp = norm(equilibrium)
         ## dual residual
-        ϵd = norm(solver.penalty*(z - zp) )
+        ϵd = norm(solver.τ *(z - zp))
 
         stopcrit(ϵp, ϵd, solver.rtol, solver.gtol) && break
 
@@ -92,43 +159,4 @@ function solve!(pb::Grid, xini::Vector{Float64}, solver::ADMM; verbose=false)
     ADMMResults(λ, -Inf, it, ngrads, it, exec)
 end
 
-stopcrit(epsp, epsd, rtol, gtol)=(epsp < rtol) && (epsd < gtol)
-
-
-# update Bellman values and estimate value with Monte-Carlo
-function produpd!(pb::Grid, λ, Q, τ, nsimu)
-    # TODO:
-    nnodes, ntime, ninfo =  getsize(pb)
-    f = zeros(Float64, nnodes, ntime-1, ninfo)
-    for t in 1:ntime-1, ni in 1:ninfo
-        q = Q[t, :, ni]
-        f[:, t, ni] = pb.network.A*q
-    end
-
-    # TODO: update
-    swap!(pb, λ, Q)
-    # update Bellman functions
-    for (i, node) in enumerate(pb.nodes)
-        dpsolve!(node.problem, node.solver, node.V, atom,
-                 node.solver.uspace, ADMMDecomposition())
-    end
-
-    # simulate
-    F = zeros(Float64, nnodes, ntime-1, ninfo)
-    for (i, node) in enumerate(pb.nodes)
-        atom = ADMMAtom(λ[i, :, :], f[i, :, :,], τ)
-
-        scenarios = StochDynamicProgramming.simulate_scenarios(node.problem.noises, nsimu)
-        # TODO: dry simulation
-        sim = simulate_uzawa(node.problem, node.solver, node.V,
-                          node.x0, atom, node.solver.uspace, scenarios,
-                          PriceDecomposition())
-        F[i, :, :] = mean(sim[2], 2)
-    end
-    return F
-end
-
-function transupd!(pb::Grid, λ, F, τ)
-    admmsolve!(pb.network, λ, F, τ)
-    return pb.network.q
-end
+stopcrit(epsp, epsd, rtol, gtol) = (epsp < rtol) && (epsd < gtol)

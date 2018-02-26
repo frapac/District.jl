@@ -29,3 +29,15 @@ struct FlowInterface <: AbstractInterface
 end
 
 swap!(p::FlowInterface, v::Array{Float64}) = copy!(p.values, v)
+
+
+# Interface for augmented Lagrangian
+struct QuadInterface <: AbstractInterface
+    τ::Float64
+    values::Array{Float64}
+    penal::Array{Float64}
+    linker::AbstractConnection
+end
+
+swap!(p::QuadInterface, v::Array{Float64}) = copy!(p.values, v)
+flow!(p::QuadInterface, f::Array{Float64}) = copy!(p.penal, f)

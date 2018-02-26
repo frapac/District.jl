@@ -82,12 +82,13 @@ end
 
 
 # TODO: update this function
-function admmsolve!(net::Network, λ, F, τ)
+function admmsolve!(net::Network, F, τ)
     k1, k2 = net.k1, net.k2
 
     narcs = net.narcs
     qa = zeros(Float64, net.ntime-1, size(net.A, 2))
     pcost = 0.
+    λ = net.λ
 
     for t in 1:net.ntime-1
         mul = @view λ[:, t]
@@ -101,7 +102,7 @@ function admmsolve!(net::Network, λ, F, τ)
         @constraint(m, qp .>=  q)
         @constraint(m, qp .>= -q)
 
-        @objective(m, :Min, sum(k1*qp) + k2*dot(q, q) +
+        @objective(m, :Min, k1*sum(qp) + k2*dot(q, q) +
                             dot(mul, net.A*q + f) + τ*dot(net.A*q+f, net.A*q+f))
 
         # solve problem

@@ -48,12 +48,27 @@ function prodswap!(pb::Grid, mul::Vector{Float64})
         swap!(d, mul[s1:s2])
     end
 end
+function flow!(pb::Grid, flow::Vector{Float64})
+    ntime = ntimes(pb) - 1
+    for (id, d) in enumerate(pb.nodes)
+        s1 = (id-1) * ntime + 1
+        s2 = id * ntime
+        flow!(d, flow[s1:s2])
+    end
+end
 # swap transport problem
 transswap!(pb::Grid, mul::Vector{Float64}) = swap!(pb.net, mul)
 # update graph exchange in nodes subproblems
 function swap!(pb::Grid, mul::Vector{Float64})
     prodswap!(pb, mul)
     transswap!(pb, mul)
+end
+
+function swap!(pb::Grid, mul::Vector{Float64}, flow::Vector{Float64})
+    # first, swap multipliers
+    swap!(pb, mul)
+    # then, swap current flows
+    flow!(pb, f)
 end
 
 # check consistency of grid with decomosition algorithm

@@ -155,6 +155,17 @@ function objective(house::House, xindex=0, uindex=0)
             m.ext[:coupling] = @constraint(m, u[ifu] == house.conn.values[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
+        elseif isa(house.conn, QuadInterface)
+            # add < λ, F > + norm(F - F^k)^2
+            u = m[:u]
+            ifu = ncontrols(house) + uindex
+            push!(vals, u[ifu])
+            push!(coefs, house.conn.values[t])
+            expr = JuMP.AffExpr(vals, coefs, 0.0)
+            expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
+            # add quadratic penalty
+            quadpenalty = u[ifu] - house.conn.penal[t]
+            expr += JuMP.QuadExpr([quadpenalty], [quadpenalty], [house.conn.τ], 0.)
         else
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         end
@@ -396,6 +407,7 @@ function set!(house::House, conn::AbstractInterface)
 end
 
 swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)
+flow!(house::House, flow::Array{Float64}) = flow!(house.conn, flow)
 
 
 ################################################################################
