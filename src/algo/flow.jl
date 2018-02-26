@@ -91,7 +91,7 @@ function admmsolve!(net::Network, F, τ)
     λ = net.λ
 
     for t in 1:net.ntime-1
-        mul = @view λ[:, t]
+        mul = @view λ[t, :]
         f =   @view F[:, t]
 
         m = Model(solver=get_solver())
@@ -103,7 +103,7 @@ function admmsolve!(net::Network, F, τ)
         @constraint(m, qp .>= -q)
 
         @objective(m, :Min, k1*sum(qp) + k2*dot(q, q) +
-                            dot(mul, net.A*q + f) + τ*dot(net.A*q+f, net.A*q+f))
+                            dot(mul, net.A*q + f) + τ/2.*dot(net.A*q+f, net.A*q+f))
 
         # solve problem
         status = JuMP.solve(m)

@@ -27,11 +27,17 @@ ntimes(pb::Grid) = ntimesteps(pb.ts)
 
 # Build models inside `grid` for decomposition
 function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface;
-                maxflow=6.)
+                maxflow=6., tau=1.)
     for d in grid.nodes
         price = zeros(Float64, ntimes(grid)-1)
         # instantiate connection interface
-        conn = Interface(price, GraphConnection(maxflow))
+        if Interface == QuadInterface
+            flow = zeros(Float64, ntimes(grid)-1)
+            conn = Interface(tau, price, flow, GraphConnection(maxflow))
+        else
+            conn = Interface(price, GraphConnection(maxflow))
+        end
+
         # add connection to particular device
         set!(d, conn)
         # build SP model inside `d`
@@ -68,7 +74,7 @@ function swap!(pb::Grid, mul::Vector{Float64}, flow::Vector{Float64})
     # first, swap multipliers
     swap!(pb, mul)
     # then, swap current flows
-    flow!(pb, f)
+    flow!(pb, flow)
 end
 
 # check consistency of grid with decomosition algorithm

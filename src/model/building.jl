@@ -157,15 +157,17 @@ function objective(house::House, xindex=0, uindex=0)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
         elseif isa(house.conn, QuadInterface)
             # add < λ, F > + norm(F - F^k)^2
+            λk = house.conn.values[t]
+            Fk = house.conn.penal[t]
             u = m[:u]
             ifu = ncontrols(house) + uindex
             push!(vals, u[ifu])
-            push!(coefs, house.conn.values[t])
-            expr = JuMP.AffExpr(vals, coefs, 0.0)
+            push!(coefs, λk)
+            expr = JuMP.AffExpr(vals, coefs, λk*Fk )
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
             # add quadratic penalty
-            quadpenalty = u[ifu] - house.conn.penal[t]
-            expr += JuMP.QuadExpr([quadpenalty], [quadpenalty], [house.conn.τ], 0.)
+            quadpenalty = u[ifu] - Fk
+            expr += house.conn.τ/2. * dot(quadpenalty, quadpenalty)
         else
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         end

@@ -10,7 +10,7 @@
 export ADMM
 
 
-struct ADMM <: AbstractDecompositionSolver
+mutable struct ADMM <: AbstractDecompositionSolver
     # number of timesteps
     ntime::Int
     # current dual cost
@@ -30,17 +30,19 @@ struct ADMM <: AbstractDecompositionSolver
     gtol::Float64
     nsimu::Int
     nit::Int
-    models::Dict()
+    maxit::Int
+    models::Dict
 end
 """
     ADMM(pb::Grid)
 
 Build ADMM solver.
 """
-function ADMM(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), rtol=1e-2, gtol=1e-2, tau=1.)
+function ADMM(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), maxit=20,
+              rtol=1e-2, gtol=1e-2, tau=1.)
     if ~checkconsistency(pb, QuadInterface)
-        error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
-              for price decomposition")
+        error("Wrong interfaces inside `pb.nodes`. Use `QuadInterface`
+              for ADMM decomposition")
     end
     nnodes = length(pb.nodes)
     ntime = ntimesteps(pb.nodes[1].time)
@@ -51,7 +53,7 @@ function ADMM(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), rtol=1e-2, gtol=1e-2,
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    ADMM(ntime, Inf, F, Q, algo, scen, tau, rtol, gtol, nsimu, nit, mod)
+    ADMM(ntime, Inf, F, Q, algo, scen, tau, rtol, gtol, nsimu, nit, maxit, mod)
 end
 
 struct ADMMResults{T}
@@ -68,8 +70,6 @@ function solve!(pb::Grid, dadp::ADMM)
     for d in pb.nodes
         dadp.models[d.name] = solve(d, dadp.algo)
     end
-    # solve transport problem with augmented Lagrangian
-    admmsolve!(pb.net, dadp.F, dadp.τ)
 end
 
 function simulate!(pb::Grid, dadp::ADMM)
@@ -79,13 +79,8 @@ function simulate!(pb::Grid, dadp::ADMM)
         # take average of importation flows for Node `d`
         dadp.F[id, :] = mean(u[:, :, end], 2)
         # take average of costs
-        dadp.cost -= mean(c)
+        dadp.cost += mean(c)
     end
-
-    # add transportation cost
-    dadp.cost -= pb.net.cost
-    # update Q flows inside DADP
-    copy!(dadp.Q, pb.net.Q)
 end
 
 function ∇f(pb::Grid, dadp::ADMM)
@@ -95,8 +90,7 @@ function ∇f(pb::Grid, dadp::ADMM)
         q = dadp.Q[t, :]
         dg[t, :] = (pb.net.A*q + f)[:]
     end
-    # minus sign because in DADP we consider -f instead of f  (max f = - min -f)
-    return -dg[:]
+    return dg[:]
 end
 
 
@@ -105,55 +99,65 @@ end
 
 We use a solver to perform the gradient descent.
 """
-function solve!(pb::Grid, xini::Vector{Float64}, solver::ADMM; verbose=false)
+function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
     # get initial position
+    nx = length(xini)
     λ = copy(xini)
-    equilibrium = zeros(Float64, length(λ))
+    # TODO: initilization of flow F ???
+    equilibrium = zeros(Float64, nx)
 
-    Q = copy(pb.net.Q)
-    λp = Inf
-    Qp = Inf
-    Fp = Inf
-    zp = Inf
+    F  = zeros(Float64, nx)
+    zp = zeros(Float64, nx)
+    z  = zeros(Float64, nx)
 
     # store evolution of gradient
     it = -1
     ngrads = Float64[]
     exec = Float64[]
 
-    for it in 1:solver.niter
+    for it in 1:solver.maxit
         tic()
-        # TODO: add multiswap for grids
-        swap!(pb, λ, F)
+        ###
+        # solve production problem
+        ## update multiplier
+        prodswap!(pb, λ)
+        # update flows
+        flow!(pb, zp)
+        # solve production problem with augmented Lagrangian
         solve!(pb, solver)
+        # simulate to estimate outputed flows
         simulate!(pb, solver)
 
+        ###
+        transswap!(pb, λ)
+        # solve transport problem with augmented Lagrangian
+        admmsolve!(pb.net, solver.F, solver.τ)
+        solver.cost += pb.net.cost
+
         # determine equilibrium along scenarios
-        equilibrium = ∇g(pb)
-        z = qflow(pb, Q)[:]
+        equilibrium = ∇f(pb, solver)
+        # compute A*Q^k
+        z[:] = flowallocation(pb)
 
         # update multiplier
-        λ -= solver.τ*equilibrium
+        λ[:] = λ .+ solver.τ*equilibrium
 
         # stopping criterion
         ## primal residual
         ϵp = norm(equilibrium)
         ## dual residual
-        ϵd = norm(solver.τ *(z - zp))
+        ϵd = norm(solver.τ * (z - zp))
 
         stopcrit(ϵp, ϵd, solver.rtol, solver.gtol) && break
 
         tf = toq()
-        verbose && @printf("\t %s \t  %.4e \t %.4e \t %.4e \n", it, ϵp, ϵd, tf)
+        verbose && @printf("\t %s \t %.4e \t %.4e \t %.4e \t %.4e \n", it, solver.cost, ϵp, ϵd, tf)
 
         push!(ngrads, norm(equilibrium))
         push!(exec, tf)
 
         # save current values
-        λp = copy(λ)
-        Fp = copy(F[:])
-        Qp = copy(Q[:])
-        zp = copy(z)
+        copy!(zp, z)
     end
 
     ADMMResults(λ, -Inf, it, ngrads, it, exec)
