@@ -216,7 +216,7 @@ function ThermalHotWaterTank(name::String)
 end
 
 
-function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt, p::Dict=Dict())
+function parsedevice(hwt::ThermalHotWaterTank, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict())
     dyn = [:($(hwt.αt)*x[$xindex] + $dt*($(hwt.ηi)*$(hwt.input) - $(hwt.ηe)*$(hwt.output)))]
     return dyn
 end
@@ -329,8 +329,8 @@ function R6C2(name)
 end
 
 
-function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt, p::Dict=Dict())
-    dt2 = dt * 3600
+function parsedevice(thm::R6C2, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict())
+    dt2 = dt * 3600.
     # WARNING: here, the dynamic is express in Celsius degree instead of kWh
     dyn = [:(
         x[$xindex]    + $dt2/$(thm.Cw)*($(thm.Giw)*(x[$(xindex+1)]-x[$xindex]) +
@@ -400,7 +400,7 @@ struct ElecHeater <: AbstractHeater
     maxheating::Float64
 end
 
-parsedevice(h::ElecHeater, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+parsedevice(h::ElecHeater, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
 elecload(h::ElecHeater, uindex::Int) = :(u[$uindex])
 thermalload(h::ElecHeater, uindex::Int) = :(u[$uindex])
 nstates(h::ElecHeater) = 0
@@ -414,7 +414,7 @@ getname(h::ElecHeater) = "Elec Heater"
 struct ThermalHeater <: AbstractHeater
     maxheating::Float64
 end
-parsedevice(h::ThermalHeater, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+parsedevice(h::ThermalHeater, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
 thermalload(h::ThermalHeater, uindex::Int) = :(u[$uindex])
 nstates(h::ThermalHeater) = 0
 ncontrols(h::ThermalHeater) = 1
@@ -433,7 +433,7 @@ end
 # By default, Node is prosumer
 GraphConnection(kva::Float64) = GraphConnection(-kva, kva)
 
-parsedevice(conn::GraphConnection, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+parsedevice(conn::GraphConnection, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
 
 elecload(conn::GraphConnection, uindex::Int) = :(-u[$uindex])
 nstates(conn::GraphConnection) = 0

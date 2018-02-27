@@ -6,6 +6,7 @@
 # District optimization package
 ################################################################################
 
+__precompile__()
 module District
 
 using JLD

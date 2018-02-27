@@ -44,8 +44,8 @@ function get_irradiation(env::R6C2, ts::TimeSpan)
     irraddiffuse = loadweather(DHI(), ts)
 
     # orientation of walls
-    beta = [pi/2, pi/2, pi/2, pi/2, 0]
-    gamma = [-pi, -pi/2, 0, pi/2, 0]
+    beta = Float64[pi/2, pi/2, pi/2, pi/2, 0.]
+    gamma = Float64[-pi, -pi/2, 0., pi/2, 0.]
 
     G_extrad = zeros(ntime)
     G_intrad = zeros(ntime)
@@ -58,7 +58,7 @@ function get_irradiation(env::R6C2, ts::TimeSpan)
         azimut = get_azimuth(t*DT, day, env.altitude)
         incidence = cos.(theta_zenith - beta).*cos.(azimut - gamma)
 
-        Ib_vec = max.(0, Ib * incidence)
+        Ib_vec = max.(0., Ib * incidence)
         Id_vec = Id .* (1 + cos.(beta))/2
         Ig = Ib .* cos(theta_zenith) + Id
         Ir_vec = env.albedo * Ig .* (1 - cos.(beta))/2

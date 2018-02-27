@@ -18,7 +18,7 @@ abstract type AbstractBuilding <: AbstractNode end
 ################################################################################
 # HOUSE
 # TODO: penal tank hardcoded
-PENAL_TANK = 1.
+const PENAL_TANK = 1.
 
 # TODO: add type for model. Shall we inherit from StochDynamicProgramming?
 mutable struct House <: AbstractBuilding
@@ -101,7 +101,7 @@ end
 ################################################################################
 # COST DEFINITION
 ################################################################################
-function objective(house::House, xindex=0, uindex=0)
+function objective(house::House, xindex::Int=0, uindex::Int=0)
     bill = house.billing
 
     function costm(m, t, x, u, w)
@@ -291,7 +291,7 @@ end
 ################################################################################
 # LOAD DEFINITION
 ################################################################################
-function buildload!(house::House, uindex=1, windex=1)
+function buildload!(house::House, uindex::Int=1, windex::Int=1)
     ntime = ntimesteps(house.time)
 
     # build load corresponding to device
