@@ -4,7 +4,7 @@
 # Define interface between node and the rest of the graph
 ################################################################################
 
-export FlowInterface, PriceInterface
+export FlowInterface, PriceInterface, QuadInterface
 
 abstract type AbstractInterface end
 

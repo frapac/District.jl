@@ -133,6 +133,7 @@ function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
         # solve transport problem with augmented Lagrangian
         admmsolve!(pb.net, solver.F, solver.τ)
         solver.cost += pb.net.cost
+        copy!(solver.Q, pb.net.Q)
 
         # determine equilibrium along scenarios
         equilibrium = ∇f(pb, solver)
