@@ -166,8 +166,8 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             expr = JuMP.AffExpr(vals, coefs, λk*Fk )
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
             # add quadratic penalty
-            quadpenalty = u[ifu] - Fk
-            expr += house.conn.τ/2. * dot(quadpenalty, quadpenalty)
+            quadpenalty = u[ifu] + Fk
+            expr += house.conn.τ/2. * quadpenalty^2
         else
             expr = JuMP.AffExpr(vals, coefs, 0.0)
         end
