@@ -79,9 +79,9 @@ end
 function simulate!(pb::Grid, dadp::DADP)
     dadp.cost = 0.
     for (id, d) in enumerate(pb.nodes)
-        c, _, u = StochDynamicProgramming.simulate(dadp.models[d.name], dadp.scen[id])
+        c, flow = mcsimulation(dadp.models[d.name], dadp.scen[id])
         # take average of importation flows for Node `d`
-        dadp.F[id, :] = mean(u[:, :, end], 2)
+        dadp.F[id, :] = mean(flow, 2)
         # take average of costs
         dadp.cost -= mean(c)
     end
