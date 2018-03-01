@@ -56,7 +56,7 @@ include("algo/sensitivity.jl")
 include("algo/flow.jl")
 # sddp solver
 include("algo/sddp.jl")
-# dadp solver
+# dadp solvers
 include("algo/dadp.jl")
 include("algo/padp.jl")
 include("algo/madp.jl")
@@ -70,5 +70,11 @@ include("simulation/policy.jl")
 include("simulation/scenarios.jl")
 # Monte Carlo simulation
 include("simulation/simulation.jl")
+
+
+##########
+# UTILS
+# display functions
+include("display.jl")
 
 end
