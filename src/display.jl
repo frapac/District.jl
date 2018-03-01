@@ -14,4 +14,4 @@ end
 dispglobal(sddp::SDDPInterface, t::Int) = println(sddp.solverinterface[t])
 
 "Print global optimization model corresponding to simulation `sim`."
-disppolicy(policy::AbstractPolicy, sim::Simulator, t::Int) = println(District.buildproblem!(policy, sim.model, t))
+disppolicy(policy::AbstractPolicy, sim::Simulator, t::Int) = println(buildproblem!(policy, sim.model, t))

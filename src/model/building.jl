@@ -66,6 +66,7 @@ function build!(house::House, x0::Vector{Float64})
     xb = xbounds(house)
     ub = ubounds(house)
 
+    reset!.(house.devices)
     buildlink!(house)
 
     # build probability laws
@@ -137,6 +138,7 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             push!(coefs, 1.0)
         end
 
+        # TODO: move this part in dedicated function
         # add decomposition price
         if isa(house.conn, PriceInterface)
             # add < λ, F >
@@ -163,7 +165,7 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             ifu = ncontrols(house) + uindex
             push!(vals, u[ifu])
             push!(coefs, λk)
-            expr = JuMP.AffExpr(vals, coefs, λk*Fk )
+            expr = JuMP.AffExpr(vals, coefs, λk*Fk)
             expr += JuMP.QuadExpr([u[ifu]], [u[ifu]], [1e-2], 0.)
             # add quadratic penalty
             quadpenalty = u[ifu] + Fk
@@ -404,8 +406,12 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 # TODO: here, setting Interface MUST happened just before building model
 # TODO: raise error if devices added after Interface
 function set!(house::House, conn::AbstractInterface)
+    if isa(house.conn, NoneInterface)
+        add!(house, conn.linker)
+    else
+        house.devices[end] = conn.linker
+    end
     house.conn = conn
-    add!(house, conn.linker)
 end
 
 swap!(house::House, exch::Array{Float64}) = swap!(house.conn, exch)

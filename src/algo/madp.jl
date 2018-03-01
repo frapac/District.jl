@@ -39,7 +39,7 @@ Build MADP solver.
 function MADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit), maxit=50)
     if ~checkconsistency(pb, FlowInterface)
         error("Wrong interfaces inside `pb.nodes`. Use `FlowInterface`
-              for quantities decomposition")
+              for prediction decomposition")
     end
     nnodes = length(pb.nodes)
     ntime = ntimesteps(pb.nodes[1].time)
@@ -92,8 +92,9 @@ function solve!(pb::Grid, algo::MADP, V0::Vector{Float64}, μ0::Vector{Float64})
 
         # update allocation and transport price
         V[:] = -flowallocation(pb)
+        println(mean(pb.nodes[1].conn.values))
         μ[:] = (algo.λ')[:]
-        μ[μ .> 0] = 0
+        #= μ[μ .> 0] = 0 =#
 
         #= if length(μ[μ .> 0.]) > 0 =#
         #=     break =#

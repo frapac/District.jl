@@ -67,10 +67,16 @@ end
     @test District.narcs(pb) == 1
     @test District.ntimes(pb) == District.ntimesteps(ts)
 
+    ndev1 = length(h1.devices)
+    ndev2 = length(h2.devices)
     # Build SP problems in each node
-    for Interface in [FlowInterface, PriceInterface]
+    for Interface in [FlowInterface, PriceInterface, QuadInterface]
         build!(pb, xini, Interface)
         @test District.checkconsistency(pb, Interface)
+        # test that we add only one device corresponding to
+        # graph interface
+        @test length(h1.devices) == ndev1 + 1
+        @test length(h2.devices) == ndev2 + 1
     end
 
     @test isa(District.initpos(pb), Vector{Float64})

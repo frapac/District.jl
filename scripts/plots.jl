@@ -1,8 +1,6 @@
 # Macros to plot SimulationResults
 
 NSCEN = min(100, length(res.costs))
-using PyCall
-@pyimport numpy
 
 macro ushow(res, ind, nscen=NSCEN)
     return :(plot($res.controls[:, 1:$nscen, $ind]))
