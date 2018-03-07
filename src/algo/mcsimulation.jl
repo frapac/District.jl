@@ -103,15 +103,23 @@ function sensitivity(model::StochDynamicProgramming.SPModel,
                                               solverProblems[t], t, xt, ξt)
 
 
-            # extract sensitivity
-            sensitivity[t, k, :] = JuMP.getdual(solverProblems[t].ext[refcons])
-            stockTrajectories[t+1, k, :] = sol.xf
-            # and the current cost:
-            costs[k] += sol.objval - sol.θ
-            if t==T-1
-                costs[k] += sol.θ
+            if sol.status
+                # extract sensitivity
+                sensitivity[t, k, :] = JuMP.getdual(solverProblems[t].ext[refcons])
+                stockTrajectories[t+1, k, :] = sol.xf
+                # and the current cost:
+                costs[k] += sol.objval - sol.θ
+                if t==T-1
+                    costs[k] += sol.θ
+                end
+            else
+                costs[k] = Inf
+                break
             end
         end
     end
-    return costs, sensitivity
+
+    # remove unvalid trajectories
+    isvalid = isfinite.(costs)
+    return costs[isvalid], sensitivity[:, isvalid]
 end
