@@ -10,9 +10,9 @@ include("solvers.jl")
 
 srand(2713)
 
-ALGO = "DADP"
+ALGO = "SDDP"
 
-pb, xini = twohouse(nbins=10)
+pb, xini = twelvehouse(nbins=10)
 
 if ALGO == "DADP"
     build!(pb, xini, PriceInterface, maxflow=6.)
@@ -28,6 +28,6 @@ elseif ALGO == "PADP"
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    sim    = Simulator(pb, 1, generation = "total", nbins = 50)
+    sim    = Simulator(pb, 1, generation="reduction", nbins=50)
     algo = runsddp(sim.model)
 end

@@ -49,24 +49,25 @@ end
 
 Build Simulator corresponding to Node `n` and to `nassess` scenarios.
 """
-function Simulator(n::AbstractNode, nassess::Int)
+function Simulator(n::AbstractNode, nassess::Int, outsample=true)
     xname, uname, wname = getcorrespondance(n)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
     ts = n.time
-    scen = genassessments(ts, n.noises, nassess)
+    scen = outsample ? genassessments(ts, n.noises, nassess) : genscen(n.model, nassess)
     return Simulator(names, ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
 end
 
 
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
-                   generation="reduction", nbins=10, noptscen=100)
+                   generation="reduction", nbins=10, noptscen=100, outsample=true)
     xname, uname, wname = getcorrespondance(pb)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
     ts = pb.ts
-    scen = genassessments(pb, nassess)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
+    # generate scenarios
+    scen = outsample ? genassessments(pb, nassess) : genscen(spmodel, nassess)
     return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end

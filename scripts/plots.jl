@@ -1,6 +1,10 @@
 # Macros to plot SimulationResults
 
-NSCEN = min(100, length(res.costs))
+try
+    NSCEN = min(100, length(res.costs))
+catch
+    NSCEN = 100
+end
 
 macro ushow(res, ind, nscen=NSCEN)
     return :(plot($res.controls[:, 1:$nscen, $ind]))
@@ -10,6 +14,15 @@ macro xshow(res, ind, nscen=NSCEN)
 end
 macro cshow(res, nbins=50)
     return :(PyPlot.plt[:hist](.25*$res.costs', $nbins, edgecolor="k"))
+end
+
+function pplot(tab)
+    fig, ax = subplots()
+    plot(tab, lw=.5)
+    xticks(0:12:96, 0:3:24)
+    xlabel("Hour")
+    ax[:spines]["top"]["set_visible"](false)
+    ax[:spines]["right"]["set_visible"](false)
 end
 
 # Plot value functions
@@ -43,4 +56,14 @@ function plotvf(xx, yy, vals, ax=nothing)
     end
     ax[:plot_surface](xx, yy, vals)
     return ax
+end
+
+function plotcomp(xx, yy)
+    fig = figure()
+    ax = fig[:add_subplot](1, 1, 1, projection="3d")
+    ax[:plot_surface](xx, yy, .25vals_p', label="Price function")
+    ax[:plot_surface](xx, yy, .25vals_q', label="Quant function")
+    xlabel("Battery level [kWh]")
+    ylabel("Tank level [kWh]")
+    zlabel("Value function [€]")
 end
