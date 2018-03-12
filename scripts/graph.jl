@@ -1,5 +1,23 @@
 include("stress.jl")
 
+hasbattery(node::House) = District.hasdevice(node, Battery)
+haspv(node::House) = District.hasnoise(node, PVProduction)
+
+function getshape(pb::Grid)
+    shapes = String[]
+    for d in pb.nodes
+        if hasbattery(d) && haspv(d)
+            push!(shapes, "darkred")
+        elseif haspv(d)
+            push!(shapes, "darkgreen")
+        else
+            push!(shapes, "black")
+        end
+    end
+    shapes
+end
+
+
 "Get adjacence matrix of node-arc incidence matrix `A`."
 function getadjacence(A::Array{Float64, 2})
     nnodes = size(A, 1)
@@ -36,7 +54,7 @@ function plotgraph(A)
 end
 
 "Display flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotflow(A, q)
+function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
     srand(11)
     nnodes, narcs = size(A)
     adjmat = getadjacence(A)
@@ -50,9 +68,30 @@ function plotflow(A, q)
         pos = find(x->(x!=0), A[:, edge])
         α = abs(q[edge] / qmax)
         i, j = pos[1], pos[2]
-        plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=4., zorder=1)
+        plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=10*α, zorder=1)
+
+        if darrow
+            # start position
+            x0, y0 = (q[edge] > 0.)? (posx[i], posy[i]) : (posx[j], posy[j])
+            # stop position
+            x1, y1 = (q[edge] > 0.)? (posx[j], posy[j]) : (posx[i], posy[i])
+
+            x0 -= offset; y0 -= offset
+            x1 -= offset; y1 -= offset
+
+
+            xstart = x0 + alpha*(x1 - x0)
+            ystart = y0 + alpha*(y1 - y0)
+            dx = (1 - 2*alpha) * (x1 - x0)
+            dy = (1 - 2*alpha) * (y1 - y0)
+            arrow(xstart, ystart, dx, dy,
+                  head_width=0.01, head_length=0.05, fc="k")
+
+        end
     end
-    scatter(posx, posy, s=150, color="k", zorder=2)
+    scatter(posx, posy, s=150, color=getshape(pb), zorder=2)
+
+
     axis("off")
 
 end
