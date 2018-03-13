@@ -249,6 +249,9 @@ function getrealcost(pb::Grid)
         for d in pb.nodes
             cost += getrealcost(d)(t, x, u, w)
         end
+        # add network cost
+        na = narcs(pb)
+        cost += getcost(pb.net, u[end-na+1:end])
         return cost
     end
     return realcost

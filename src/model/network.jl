@@ -87,3 +87,5 @@ function flowallocation(net::Network)
     end
     return dg[:]
 end
+
+getcost(net::Network, q::Vector{Float64}) = net.k1*sum(abs.(q)) + net.k2*dot(q, q)
