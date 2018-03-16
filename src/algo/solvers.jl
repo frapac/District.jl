@@ -7,6 +7,12 @@
 # TODO: clean SDDP solver
 
 export solve
+
+"""
+    AbstractSolver
+
+Abstract type to define optimization solver objects.
+"""
 abstract type AbstractSolver end
 
 
