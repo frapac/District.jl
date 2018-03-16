@@ -14,6 +14,11 @@ export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTan
        ThermalHeater
 export GraphConnection
 
+"""
+    AbstractDevice
+
+Abstract type for objects that implement a device.
+"""
 abstract type AbstractDevice <: AbstractModel end
 
 """
@@ -92,6 +97,25 @@ getname(d::AbstractDevice) = "Undefined"
 
 ################################################################################
 # Battery
+"""
+    struct Battery <: AbstractDevice
+        name::String
+        # battery lower bound
+        binf::Float64
+        # battery upper bound
+        bup::Float64
+        # max charge rate
+        δb::Float64
+        # charge yield
+        ρi::Float64
+        # discharge yield
+        ρe::Float64
+        # auto-discharge rate
+        αc::Float64
+    end
+
+Battery device.
+"""
 struct Battery <: AbstractDevice
     name::String
     # battery lower bound
@@ -132,6 +156,27 @@ getname(bat::Battery) = "Battery"
 ################################################################################
 # Electrical hot water tank
 # EHWT has only a output and no input by construction.
+"""
+    struct ElecHotWaterTank <: AbstractDevice
+        name::Symbol
+        # auto-discharge rate
+        αt::Float64
+        # charge yield
+        ηi::Float64
+        # discharge yield
+        ηe::Float64
+        # tank max energy
+        hmax::Float64
+        # tank max power
+        power::Float64
+        # allowable temperature variation
+        ΔT::Float64
+        # output flow
+        output::Expr
+    end
+
+Electrical hot water tank device.
+"""
 struct ElecHotWaterTank <: AbstractDevice
     name::Symbol
     # auto-discharge rate
@@ -184,6 +229,27 @@ getname(hwt::ElecHotWaterTank) = "EHWT"
 ################################################################################
 # Thermal hot water tank
 # THWT has only a output and no input by construction.
+"""
+    struct ThermalHotWaterTank <: AbstractDevice
+        name::Symbol
+        # auto-discharge rate
+        αt::Float64
+        # charge yield
+        ηi::Float64
+        # discharge yield
+        ηe::Float64
+        # tank max energy
+        hmax::Float64
+        # allowable temperature variation
+        ΔT::Float64
+        # input flow
+        input::Expr
+        # output flow
+        output::Expr
+    end
+
+Thermal hot water tank device.
+"""
 struct ThermalHotWaterTank <: AbstractDevice
     name::Symbol
     # auto-discharge rate
@@ -231,6 +297,7 @@ ncontrols(hwt::ThermalHotWaterTank) = 0
 xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[]
 getname(hwt::ThermalHotWaterTank) = "THWT"
+
 
 ################################################################################
 # R6C2 model
@@ -356,6 +423,23 @@ getname(thm::R6C2) = "Thermal Enveloppe"
 
 ################################################################################
 # CHP and burners models
+"""
+    struct MicroCHP <: AbstractDevice
+        name::String
+        # max gas power
+        power::Float64
+        # thermal yield
+        yield::Float64
+        # proportion of elec
+        eta_elec::Float64
+        # max power elec
+        power_elec::Float64
+        # max thermal power
+        power_therm::Float64
+    end
+
+Micro Combined Heat and Power Generator device.
+"""
 struct MicroCHP <: AbstractDevice
     name::String
     # max gas power
@@ -396,6 +480,13 @@ getname(chp::MicroCHP) = "μCHP"
 # Heaters
 abstract type AbstractHeater <: AbstractDevice end
 
+"""
+    struct ElecHeater <: AbstractHeater
+        maxheating::Float64
+    end
+
+Electrical heater device.
+"""
 struct ElecHeater <: AbstractHeater
     maxheating::Float64
 end
@@ -411,6 +502,13 @@ getname(h::ElecHeater) = "Elec Heater"
 
 
 # TODO: add dynamics of ThermalHeater
+"""
+    struct ThermalHeater <: AbstractHeater
+        maxheating::Float64
+    end
+
+Thermal heater device.
+"""
 struct ThermalHeater <: AbstractHeater
     maxheating::Float64
 end

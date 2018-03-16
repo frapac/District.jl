@@ -11,6 +11,18 @@ export Simulator, SimulationResult
 
 ################################################################################
 # Simulation results
+"""
+    struct SimulationResult
+        # costs along assessment scenarios. size = (nscen,)
+        costs::Vector{Float64}
+        # stocks along assessment scenarios. size = (ntime, nscen, nx)
+        stocks::Array{Float64, 3}
+        # controls along assessment scenarios. size = (ntime, nscen, nu)
+        controls::Array{Float64, 3}
+    end
+
+Object to store results of a simulation.
+"""
 struct SimulationResult
     costs::Vector{Float64}
     stocks::Array{Float64, 3}
@@ -25,6 +37,37 @@ end
 
 ################################################################################
 # Simulator
+"""
+    struct Simulator
+        # names of states, controls and uncertainties
+        names::Dict
+        # time period considered
+        ts::TimeSpan
+        # SP Model to simulate
+        model::StochDynamicProgramming.SPModel
+        # assessment scenarios
+        scenarios::Array{Float64, 3}
+        # simulation's dynamics
+        realdynamic::Function
+        # simulations's costs
+        realcost::Function
+        # simulation's final cost
+        realfinalcost::Function
+    end
+
+Simulator object.
+
+
+# Construction
+
+    Simulator(n::AbstractNode, nassess::Int)
+
+Build Simulator corresponding to Node `n` and to `nassess` scenarios.
+
+    Simulator(pb::AbstractGrid, nassess::Int)
+
+Build Simulator corresponding to Grid `pb` and to `nassess` scenarios.
+"""
 struct Simulator
     # names of states, controls and uncertainties
     names::Dict
@@ -44,11 +87,6 @@ end
 
 
 # TODO: currently dynamics is the same as in optimization model
-"""
-    Simulator(n::AbstractNode, nassess::Int)
-
-Build Simulator corresponding to Node `n` and to `nassess` scenarios.
-"""
 function Simulator(n::AbstractNode, nassess::Int, outsample=true)
     xname, uname, wname = getcorrespondance(n)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
@@ -83,8 +121,8 @@ end
 """
     simulate(sim::Simulator, policy::AbstractPolicy)
 
-Simulate strategies specified by `policy` on `sim` Simulator.
-Return a SimulationResult object.
+Simulate strategies specified by `policy` with `sim` Simulator.
+Return a `SimulationResult` object.
 """
 function simulate(simulator::Simulator, policy::AbstractPolicy)
     scenario = simulator.scenarios

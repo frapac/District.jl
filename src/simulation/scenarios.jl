@@ -9,6 +9,21 @@
 # ASSESSMENT SCENARIOS
 ################################################################################
 
+"""
+    genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int)
+
+Generate `nscen` assessment scenarios for uncertainties `noises` over time period `ts`.
+
+    genassessments(node::AbstractNode, nscen::Int)
+
+Generate `nscen` assessment scenarios for uncertainties in Node `node`.
+
+    genassessments(pb::Grid, nscen::Int)
+
+Generate `nscen` assessment scenarios for uncertainties in Grid `pb`.
+"""
+function genassessments end
+
 function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int)
     # get noises dimensions
     nnoises = sum(nnoise.(noises))
@@ -53,6 +68,11 @@ end
 ################################################################################
 # FORECASTING
 ################################################################################
+"""
+    genforecast(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty})
+
+Generate a forecast for uncertainties `noises` over time period `ts`.
+"""
 function genforecast(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty})
     # get noises dimensions
     nnoises = sum(nnoise.(noises))
