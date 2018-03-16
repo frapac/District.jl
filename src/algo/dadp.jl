@@ -35,6 +35,8 @@ mutable struct DADP <: AbstractDecompositionSolver
     nit::Int
     # models stores SDDPInterface in dedicated Dictionnary
     models::Dict
+    #decomposition
+    decomp::String
 end
 
 
