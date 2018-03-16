@@ -60,7 +60,8 @@ ncontrols(h::House) = sum(ncontrols.(h.devices))
 nnoises(h::House) = sum(nnoise.(h.noises))
 
 
-function build!(house::House, x0::Vector{Float64})
+function build!(house::House, x0::Vector{Float64};
+                info=:HD)
     buildload!(house)
     ntime = ntimesteps(house.time)
     xb = xbounds(house)
@@ -74,7 +75,7 @@ function build!(house::House, x0::Vector{Float64})
     # build objective function
     costm = objective(house)
     # build final cost
-    fcost = buildfcost(house)
+    fcost = (info == :HD)? buildfcost(house) : final_cost_dh
     dynam = builddynamic(house)
 
     # build SP model
@@ -82,7 +83,7 @@ function build!(house::House, x0::Vector{Float64})
                                                   x0, costm,
                                                   dynam,
                                                   tonoiselaws(laws),
-                                                  info=:HD,
+                                                  info=info,
                                                   Vfinal=fcost)
 
     set_state_bounds(spmodel, xb)
@@ -191,7 +192,7 @@ function buildfcost(house::House)
         u = m[:u]
         xf = m[:xf]
         z1 = @JuMP.variable(m, lowerbound=0)
-        postank = getposition(house, ElecHotWaterTank)
+        postank = try getposition(house, ElecHotWaterTank) catch 2 end
         @JuMP.constraint(m, z1 >= PENAL_TANK * (2. - xf[postank]))
 
         #= z1 = @JuMP.variable(m, [1:length(fcost)], lowerbound=0) =#
@@ -215,7 +216,7 @@ function final_cost_dh(model, m)
     u = m[:u]
     xf = m[:xf]
     @JuMP.variable(m, z1[1:ns] >= 0)
-    @JuMP.constraint(m, z1[i=1:ns] .>= 6 - xf[2, i])
+    @JuMP.constraint(m, z1[i=1:ns] .>= 2 - xf[2, i])
     for i in 1:ns
         @JuMP.constraint(m, alpha[i] == PENAL_TANK*z1[i])
     end
@@ -327,6 +328,7 @@ function getrealcost(house::House)
     bill = house.billing
 
     # Note: we do not consider price decomposition cost in real cost
+    # TODO: a lot of case are not considered here
     function real_cost(t, x, u, w)
         cost = 0.
         if ~isa(bill.elec, NoneElecPrice)

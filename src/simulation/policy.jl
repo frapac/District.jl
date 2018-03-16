@@ -315,7 +315,8 @@ function buildproblem!(policy::DADPPolicy, model, t::Int)
     @variable(m, α[1:nvf])
     # Here, we consider that global value function is
     # V^{tot}_t(x_t) = ∑_{i∈N} V_t^i(x_t^i)
-    @objective(m, Min, model.costFunctions(m, t, x, u, w) + sum(α[i] for i in 1:nvf))
+    @constraint(m, alpha == sum(α[i] for i in 1:nvf))
+    @objective(m, Min, model.costFunctions(m, t, x, u, w) + alpha)
 
     xcount = 1
     for idim in 1:nvf
@@ -337,9 +338,6 @@ function buildproblem!(policy::DADPPolicy, model, t::Int)
     # Add final cost
     if t == ntime(policy) - 1
         model.finalCost(model, m)
-        # set nodal value functions to 0
-        @constraint(m, α .== 0)
-        @objective(m, Min, model.costFunctions(m, t, x, u, w) + alpha)
     end
     policy.problem = m
 end
