@@ -38,6 +38,19 @@ struct ElecHouse <: AbstractProfile
 end
 ElecHouse(;pv=0, heat=3, bat="", env="rt2012", idhouse=1, nbins=10) = ElecHouse(pv, heat, bat, env, idhouse, nbins)
 
+function loadMultipleHouse(ts::TimeSpan, nnodes::Int64)
+    houseArray = Array{AbstractNode,1}(nnodes)
+    for i in 1:nnodes
+        solarpv = bitrand(1)
+        if solarpv[1]
+            houseArray[i] = load(ts, ElecHouse(pv=rand(1:10), heat=rand(2:6), bat="bat0"^rand(0:1), nbins=1))
+        else 
+            houseArray[i] = load(ts, ElecHouse(pv=0, heat=rand(2:6), bat="", nbins=1))
+        end
+    end
+
+    return houseArray
+end
 
 function load(ts::TimeSpan, prof::ElecHouse)
     house = House(ts)
