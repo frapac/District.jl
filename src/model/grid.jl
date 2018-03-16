@@ -49,8 +49,9 @@ end
 function prodswap!(pb::Grid, mul::Vector{Float64})
     ntime = ntimes(pb) - 1
     for (id, d) in enumerate(pb.nodes)
-        s1 = (id-1) * ntime + 1
-        s2 = id * ntime
+        slambda = sizelambda(d)
+        s1 = (id-1) * slambda + 1
+        s2 = id * slambda
         swap!(d, mul[s1:s2])
     end
 end
@@ -62,6 +63,7 @@ function flow!(pb::Grid, flow::Vector{Float64})
         flow!(d, flow[s1:s2])
     end
 end
+
 # swap transport problem
 transswap!(pb::Grid, mul::Vector{Float64}) = swap!(pb.net, mul)
 # update graph exchange in nodes subproblems
