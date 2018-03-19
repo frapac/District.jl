@@ -67,7 +67,7 @@ end
 
 
 
-
+# Build zones 
 z1 = Zone(ts, vec1, net1)
 z2 = Zone(ts, vec2)
 z3 = Zone(ts, vec3)
@@ -77,10 +77,8 @@ pbreduced = Grid(ts, [z1, z2, z3], netreduced)
 # Build SP problems in each zone
 zonebuild!(pbreduced, xini, PriceInterface)
 
-
 # Select algorithm to solve global problem
 algo = DADP(pbreduced, nsimu=1, nit=10)
-
 
 f, grad! = District.oracle(pbreduced, algo)
 gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)

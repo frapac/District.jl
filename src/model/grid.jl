@@ -55,6 +55,7 @@ function prodswap!(pb::Grid, mul::Vector{Float64})
         swap!(d, mul[s1:s2])
     end
 end
+
 function flow!(pb::Grid, flow::Vector{Float64})
     ntime = ntimes(pb) - 1
     for (id, d) in enumerate(pb.nodes)
@@ -209,6 +210,7 @@ end
 # remember: flow is last control in each node (u[end]) so its position
 # is ncontrols
 getflowindex(pb::Grid) = cumsum(ncontrols.(pb.nodes))
+    
 
 # Build coupling constraint Aq + F for a grid.
 function buildconstr(pb::Grid)
@@ -218,7 +220,6 @@ function buildconstr(pb::Grid)
 
     constr(t, x, u, w) = A * u[end-na+1:end] + u[findex]
 end
-
 
 # Build probability laws for grid `pb`.
 # WARNING
