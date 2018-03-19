@@ -149,9 +149,8 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             u = m[:u]
             ifu = ncontrols(house) + uindex
 
-            if ncontrols(house.conn) == 2
-                @constraint(m, ubounds[house.conn] <= u[ifu] + u[ifu+1] <= ubounds[house.conn])
-                ifu += 1
+            if ncontrols(house.conn.linker) == 2
+                @constraint(m, ubounds[house.conn.linker] <= u[ifu-1] + u[ifu] <= ubounds[house.conn.linker])
             end
 
             push!(vals, u[ifu])

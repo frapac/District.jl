@@ -15,7 +15,7 @@ mutable struct Zone <: AbstractNode
     # Edges
     net::AbstractNetwork
     # SP model
-    model
+    model::StochDynamicProgramming.SPModel
 end
 
 Zone(ts::AbstractTimeSpan) = Zone(ts, AbstractNode[], NoneNetwork())
@@ -39,7 +39,9 @@ zonebuild!(grid::Grid, xini::Dict, Interface::Type=PriceInterface;
                 maxflow=6., tau=1.)
 	for zone in grid.nodes
 		build!(zone, xini[d in zone.nodes], PriceInterface)
+		zone.model = getproblem(zone, generation="reduction", nbins=30)
 	end
+
 end
 
 

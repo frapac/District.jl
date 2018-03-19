@@ -77,6 +77,7 @@ pbreduced = Grid(ts, [z1, z2, z3], netreduced)
 # Build SP problems in each zone
 zonebuild!(pbreduced, xini, PriceInterface)
 
+
 # Select algorithm to solve global problem
 algo = DADP(pbreduced, nsimu=1, nit=10)
 
