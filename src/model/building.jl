@@ -59,6 +59,7 @@ nstocks(h::House) = sum(nstates.(h.devices))
 ncontrols(h::House) = sum(ncontrols.(h.devices))
 nnoises(h::House) = sum(nnoise.(h.noises))
 
+sizelambda(h::House) = ntimesteps(time)
 
 function build!(house::House, x0::Vector{Float64};
                 info=:HD)
@@ -99,6 +100,8 @@ end
 function towhitenoise(laws::Vector{NoiseLaw})
     WhiteNoise([DiscreteLaw(w.support', w.proba) for w in laws])
 end
+
+
 
 ################################################################################
 # COST DEFINITION
@@ -145,6 +148,11 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             # add < λ, F >
             u = m[:u]
             ifu = ncontrols(house) + uindex
+
+            if ncontrols(house.conn.linker) == 2
+                @constraint(m, ubounds[house.conn.linker] <= u[ifu-1] + u[ifu] <= ubounds[house.conn.linker])
+            end
+
             push!(vals, u[ifu])
             push!(coefs, house.conn.values[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)

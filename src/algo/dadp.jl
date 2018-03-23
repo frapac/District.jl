@@ -43,12 +43,12 @@ end
 
 Build DADP solver.
 """
-function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
     if ~checkconsistency(pb, PriceInterface)
         error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
               for price decomposition")
     end
-    nnodes = length(pb.nodes)
+    nnodes = nnodes(pb)
     ntime = ntimesteps(pb.nodes[1].time)
 
     F = zeros(Float64, nnodes, ntime-1)
@@ -67,7 +67,7 @@ end
 #                     trajectories via Monte Carlo with relaxed problem.
 #     iii) ∇g : eventually, compute subgradient along previous trajectories.
 
-function solve!(pb::Grid, dadp::DADP)
+function solve!(pb::AbstractGrid, dadp::DADP)
     # solve production subproblems
     for d in pb.nodes
         dadp.models[d.name] = solve(d, dadp.algo)
@@ -92,7 +92,29 @@ function simulate!(pb::Grid, dadp::DADP)
     copy!(dadp.Q, pb.net.Q)
 end
 
-function ∇f(pb::Grid, dadp::DADP)
+function simulate!(pb::ZonalGrid, dadp::DADP)
+    dadp.cost = 0.
+    nodeindex = 0.
+    for (idzone, zone) in enumerate(pb.nodes)
+
+        c, flow = mcsimulation(dadp.models[zone.name], dadp.scen[idzone], zone)
+        for (id, d) in enumerate(zone.bordernodes)
+            # take average of importation flows for Node `d`
+            dadp.F[nodeindex + id, :] = mean(flow[id], 2)
+        end
+
+        # take average of costs
+        dadp.cost -= mean(c)
+        nodeindex += length(zone.bordernodes)
+    end
+
+    # add transportation cost
+    dadp.cost -= pb.net.cost
+    # update Q flows inside DADP
+    copy!(dadp.Q, pb.net.Q)
+end
+
+function ∇f(pb::AbstractGrid, dadp::DADP)
     dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
     for t in 1:(dadp.ntime - 1)
         f = dadp.F[:, t]
@@ -108,7 +130,7 @@ end
 ################################################################################
 # General oracle for decomposition
 ################################################################################
-function _update!(pb, algo, x)
+function _update!(pb::AbstractGrid, algo::AbstractDecompositionSolver, x::Vector{Float64})
     # update multiplier inside Grid `pb`
     swap!(pb, x)
     # resolve `pb` with these new multipliers
@@ -119,7 +141,7 @@ end
 
 # oracle return a cost function `f` and a gradient function `grad!`
 # corresponding to the transporation problem.
-function oracle(pb::Grid, algo::AbstractDecompositionSolver)
+function oracle(pb::AbstractGrid, algo::AbstractDecompositionSolver)
     xp = UInt64(0)
     function f(x)
         if hash(x) != xp

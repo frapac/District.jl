@@ -53,6 +53,51 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
     return costs, importation
 end
 
+function mcsimulation(model::StochDynamicProgramming.SPModel,
+                      param::StochDynamicProgramming.SDDPparameters,
+                      solverProblems::Vector{JuMP.Model},
+                      scenarios::Array{Float64},
+                      zone::Zone)
+
+    T = model.stageNumber
+    nb_forward = size(scenarios, 2)
+
+    stockTrajectories = zeros(T, nb_forward, model.dimStates)
+    # import is last position in controls
+    importation = zeros(T - 1, nb_forward, length(zone.bordernodes))
+
+    # Set first value of stocks equal to x0:
+    for k in 1:nb_forward
+        stockTrajectories[1, k, :] = model.initialState
+    end
+
+    # Store costs of different scenarios in an array:
+    costs = zeros(nb_forward)
+
+    uindex = cumsum(ncontrols.(node in zone.nodes))
+
+    for t=1:T-1
+        for k = 1:nb_forward
+            # Collect current state and noise:
+            xt = stockTrajectories[t, k, :]
+            ξt = scenarios[t, k, :]
+
+            sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
+                                              solverProblems[t], t, xt, ξt)
+
+            # extract sensitivity
+            stockTrajectories[t+1, k, :] = sol.xf
+            importation[t, k, :] = [sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
+            # and the current cost:
+            costs[k] += sol.objval - sol.θ
+            if t==T-1
+                costs[k] += sol.θ
+            end
+        end
+    end
+    return costs, importation
+end
+
 
 
 ############################################################

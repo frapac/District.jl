@@ -10,7 +10,9 @@
 # Define whole microgrid with different interconnected noces.
 abstract type AbstractGrid end
 
-struct Grid <: AbstractGrid
+abstract type AbstractNodalGrid <: AbstractGrid end
+
+struct Grid <: AbstractNodalGrid
     # Time span
     ts::AbstractTimeSpan
     # Nodes
@@ -20,9 +22,11 @@ struct Grid <: AbstractGrid
 end
 Grid(ts::AbstractTimeSpan) = Grid(ts, AbstractNode[], NoneNetwork())
 
-nnodes(pb::Grid) = length(pb.nodes)
-narcs(pb::Grid) = pb.net.narcs
-ntimes(pb::Grid) = ntimesteps(pb.ts)
+
+
+nnodes(pb::AbstractNodalGrid) = length(pb.nodes)
+narcs(pb::AbstractGrid) = pb.net.narcs
+ntimes(pb::AbstractGrid) = ntimesteps(pb.ts)
 
 
 # Build models inside `grid` for decomposition
@@ -46,15 +50,17 @@ function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface;
 end
 
 # swap production problem
-function prodswap!(pb::Grid, mul::Vector{Float64})
+function prodswap!(pb::AbstractGrid, mul::Vector{Float64})
     ntime = ntimes(pb) - 1
     for (id, d) in enumerate(pb.nodes)
-        s1 = (id-1) * ntime + 1
-        s2 = id * ntime
+        slambda = sizelambda(d)
+        s1 = (id-1) * slambda + 1
+        s2 = id * slambda
         swap!(d, mul[s1:s2])
     end
 end
-function flow!(pb::Grid, flow::Vector{Float64})
+
+function flow!(pb::AbstractGrid, flow::Vector{Float64})
     ntime = ntimes(pb) - 1
     for (id, d) in enumerate(pb.nodes)
         s1 = (id-1) * ntime + 1
@@ -62,15 +68,16 @@ function flow!(pb::Grid, flow::Vector{Float64})
         flow!(d, flow[s1:s2])
     end
 end
+
 # swap transport problem
-transswap!(pb::Grid, mul::Vector{Float64}) = swap!(pb.net, mul)
+transswap!(pb::AbstractGrid, mul::Vector{Float64}) = swap!(pb.net, mul)
 # update graph exchange in nodes subproblems
-function swap!(pb::Grid, mul::Vector{Float64})
+function swap!(pb::AbstractGrid, mul::Vector{Float64})
     prodswap!(pb, mul)
     transswap!(pb, mul)
 end
 
-function swap!(pb::Grid, mul::Vector{Float64}, flow::Vector{Float64})
+function swap!(pb::AbstractGrid, mul::Vector{Float64}, flow::Vector{Float64})
     # first, swap multipliers
     swap!(pb, mul)
     # then, swap current flows
@@ -78,7 +85,7 @@ function swap!(pb::Grid, mul::Vector{Float64}, flow::Vector{Float64})
 end
 
 # check consistency of grid with decomosition algorithm
-function checkconsistency(pb::Grid, Interface::Type)
+function checkconsistency(pb::AbstractGrid, Interface::Type)
     chck1 = false ∉ isa.([m.conn for m in pb.nodes], Interface)
     return chck1
 end
@@ -86,9 +93,9 @@ end
 ################################################################################
 # Build global problem corresponding to Grid
 ################################################################################
-initpos(pb::Grid) = vcat([h.model.initialState for h in pb.nodes]...)
+initpos(pb::AbstractNodalGrid) = vcat([h.model.initialState for h in pb.nodes]...)
 
-function getproblem(pb::Grid, generation="reduction", nbins=10, noptscen=100)
+function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, noptscen=100)
     # to avoid world age problem, we rebuild elecload and gasload
     # right now.
     uindex = 1
@@ -138,7 +145,7 @@ end
 
 # TODO: possible side effect with reset!
 # Only call this function at the end!!!
-function buildlink!(pb::Grid)
+function buildlink!(pb::AbstractNodalGrid)
     uindex = 0
     windex = 0
     for node in pb.nodes
@@ -153,7 +160,7 @@ function buildlink!(pb::Grid)
 end
 
 
-function builddynamic(pb::Grid)
+function builddynamic(pb::AbstractNodalGrid)
     ntime = ntimes(pb)
     xindex = 1
     uindex = 1
@@ -179,7 +186,7 @@ function builddynamic(pb::Grid)
     return eval(:((t, x, u, w) -> $exdyn))
 end
 
-function buildcost(pb::Grid)
+function buildcost(pb::AbstractNodalGrid)
     function costgrid(m, t, x, u, w)
         # production cost
         cost = AffExpr(0.)
@@ -206,10 +213,11 @@ end
 # get index of flow importations in node
 # remember: flow is last control in each node (u[end]) so its position
 # is ncontrols
-getflowindex(pb::Grid) = cumsum(ncontrols.(pb.nodes))
+getflowindex(pb::AbstractNodalGrid) = cumsum(ncontrols.(pb.nodes))
+    
 
 # Build coupling constraint Aq + F for a grid.
-function buildconstr(pb::Grid)
+function buildconstr(pb::AbstractNodalGrid)
     na = narcs(pb)
     A = pb.net.A
     findex = getflowindex(pb)
@@ -217,12 +225,11 @@ function buildconstr(pb::Grid)
     constr(t, x, u, w) = A * u[end-na+1:end] + u[findex]
 end
 
-
 # Build probability laws for grid `pb`.
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
-function buildlaws(pb::Grid, nscen=100, nbins=10)
+function buildlaws(pb::AbstractNodalGrid, nscen=100, nbins=10)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))
 
@@ -243,7 +250,7 @@ end
 
 
 # Build real cost
-function getrealcost(pb::Grid)
+function getrealcost(pb::AbstractNodalGrid)
     function realcost(t, x, u, w)
         cost = 0.
         for d in pb.nodes
@@ -258,7 +265,7 @@ function getrealcost(pb::Grid)
 end
 
 # TODO: clean definition of final cost (again!!!)
-function buildfcost(pb::Grid)
+function buildfcost(pb::AbstractNodalGrid)
     function final_cost(model, m)
         alpha = m[:alpha]
         x = m[:x]
@@ -279,7 +286,7 @@ function buildfcost(pb::Grid)
     return final_cost
 end
 
-function getrealfinalcost(pb::Grid)
+function getrealfinalcost(pb::AbstractNodalGrid)
     function fcost(x)
         cost = 0.
         xindex = 0

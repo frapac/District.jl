@@ -51,6 +51,7 @@ function getflow(u, operation=mean)
     return vec(operation(operation(q, 2), 1))
 end
 
+
 "Display topology of graph specified by node-arc incidence matrix `A`."
 function plotgraph(A)
     srand(11)
@@ -112,7 +113,7 @@ function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
 
 end
 
-"Display aonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
+"Display zonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
 function plotzone(A, flow; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
     q = mean(mean(abs.(flow),2),1)

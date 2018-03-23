@@ -22,3 +22,9 @@ function solve(node::AbstractNode, sddp::SDDP)
     return solve_SDDP(node.model, params, 0, 0,
                       stopcrit=IterLimit(sddp.nit))
 end
+
+function solve(zone::Zone, sddp::SDDP)
+    params = get_sddp_solver()
+    return solve_SDDP(zone.model, params, 0, 0,
+                      stopcrit=IterLimit(sddp.nit))
+end
