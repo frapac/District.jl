@@ -8,6 +8,11 @@
 
 export SDDP
 
+"""
+    AbstractDPSolver
+
+Abstract type to define Dynamic Programming solvers.
+"""
 abstract type AbstractDPSolver <: AbstractSolver end
 
 

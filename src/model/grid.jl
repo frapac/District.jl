@@ -244,6 +244,7 @@ end
 
 # Build real cost
 function getrealcost(pb::Grid)
+    warn("Building real cost for `Grid` is currently broken")
     function realcost(t, x, u, w)
         cost = 0.
         for d in pb.nodes

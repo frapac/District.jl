@@ -12,10 +12,46 @@ export DADP
 
 import Base: Base.show
 
+"""
+    AbstractDecompositionSolver
+
+Abstract type to define stochastic decomposition algorithms.
+"""
 abstract type AbstractDecompositionSolver <: AbstractSolver end
 
 
 # TODO: move params in dedicated structure
+"""
+    mutable struct DADP <: AbstractDecompositionSolver
+        # number of timesteps
+        ntime::Int
+        # current dual cost
+        cost::Float64
+        # current flow in nodes
+        F::Array{Float64, 2}
+        # current flow in edges
+        Q::Array{Float64}
+        # solver to solve nodes subproblems
+        algo::AbstractDPSolver
+        # Scenario
+        scen::Array
+        # number of Monte Carlo simulations to estimate gradient
+        nsimu::Int
+        # maximum number of iterations
+        nit::Int
+        # models stores SDDPInterface in dedicated Dictionnary
+        models::Dict
+    end
+
+DADP solver.
+
+
+# Construction
+
+    DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+
+Build DADP solver.
+"""
 mutable struct DADP <: AbstractDecompositionSolver
     # number of timesteps
     ntime::Int
@@ -38,11 +74,6 @@ mutable struct DADP <: AbstractDecompositionSolver
 end
 
 
-"""
-    DADP(pb::Grid)
-
-Build DADP solver.
-"""
 function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
     if ~checkconsistency(pb, PriceInterface)
         error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`

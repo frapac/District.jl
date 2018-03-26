@@ -8,6 +8,11 @@
 
 export MPCPolicy
 
+"""
+    AbstractPolicy
+
+Abstract type to define a policy as an object.
+"""
 abstract type AbstractPolicy end
 
 """
@@ -18,11 +23,41 @@ and current timestep `t`.
 """
 function buildproblem! end
 
+
 ################################################################################
 # MPC POLICY
 ################################################################################
+"""
+    AbstractMPCPolicy <: AbstractPolicy
+
+Abstract type to define a MPC policy.
+"""
 abstract type AbstractMPCPolicy <: AbstractPolicy end
 
+"""
+    mutable struct MPCPolicy <: AbstractMPCPolicy
+        # JuMP Model
+        problem::JuMP.Model
+        # Mathematical Programming solver
+        solver
+        # MPC forecast
+        forecast
+        # Horizon
+        horizon
+        # Final time
+        final
+    end
+
+Classical Model Predictive Control policy.
+
+# Usage
+
+To take a decision `u` at time `t`:
+
+    pol = MPCPolicy(forecast)
+    buildproblem!(pol, model, t)
+    u = pol(x, w)
+"""
 mutable struct MPCPolicy <: AbstractMPCPolicy
     # JuMP Model
     problem::JuMP.Model
