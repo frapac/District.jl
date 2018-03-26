@@ -19,6 +19,19 @@ Abstract type to define stochastic decomposition algorithms.
 """
 abstract type AbstractDecompositionSolver <: AbstractSolver end
 
+"""
+    lowerbound(pb::Grid, algo::AbstractDecompositionSolver)
+
+Return Bellman lower bound obtained by decomposition solver.
+"""
+function lowerbound(pb::Grid, algo::AbstractDecompositionSolver)
+    lb = 0.
+    for d in pb.nodes
+        subpb = algo.models[d.name]
+        lb += StochDynamicProgramming.lowerbound(subpb)
+    end
+    return lb + pb.net.cost
+end
 
 # TODO: move params in dedicated structure
 """
