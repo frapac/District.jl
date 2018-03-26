@@ -98,14 +98,21 @@ end
 
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
-                   generation="reduction", nbins=10, noptscen=100, outsample=true)
+                   generation="reduction", nbins=10, noptscen=100,
+                   outsample=true, seed=-1)
+    # Get names label
     xname, uname, wname = getcorrespondance(pb)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
+    # Generate time span
     ts = pb.ts
+
+    # Model generation
+    # if specified, set random seed
+    (seed > 0) && srand(seed)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
     # generate scenarios
-    scen = outsample ? genassessments(pb, nassess) : genscen(spmodel, nassess)
+    scen = outsample ? genassessments(pb, nassess) : genscen(pb, nassess)
     return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end

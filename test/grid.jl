@@ -111,5 +111,11 @@ end
         sim = Simulator(pb, nassess, generation="reduction", nbins=nbins)
         @test isa(sim, Simulator)
         @test sim.model.noises[1].supportSize == nbins
+
+        for sample in [false, true]
+            sim = Simulator(pb, nassess, generation="total", nbins=nbins, outsample=sample)
+            @test isa(sim, Simulator)
+            @test sim.model.noises[1].supportSize == 1
+        end
     end
 end

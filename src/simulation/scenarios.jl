@@ -63,6 +63,20 @@ end
 function genscen(model::StochDynamicProgramming.SPModel, nscen::Int)
     StochDynamicProgramming.simulate_scenarios(model.noises, nscen)
 end
+function genscen(pb::Grid, nscen::Int)
+    # get total number of uncertainties
+    nw = sum(nnoises.(pb.nodes))
+    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+
+    iw = 1
+    for node in pb.nodes
+        nwnode = nnoises(node)
+        scenarios[:, :, iw:iw+nwnode-1] = genscen(node.model, nscen)
+        iw += nwnode
+    end
+    return scenarios
+
+end
 
 
 ################################################################################
