@@ -31,17 +31,7 @@ end
 
 "Get laplacian matrix of node-arc incidence matrix `A` with weight q."
 function getlaplacian(A::Array{Float64, 2}, q::Array{Float64, 1})
-    nnodes = size(A, 1)
-    narcs  = size(A, 2)
-
-    Q = zeros(narcs,narcs)
-    for i in 1:narcs
-        Q[i,i] = q[i]
-    end
-
-    L = A * Q * A'
-
-    return L
+    return A * diagm(q) * A'
 end
 
 "Get average flow stored in `u`."
@@ -66,11 +56,10 @@ function plotgraph(A)
         end
     end
     axis("off")
-
 end
 
 "Display flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
+function plotflow(A, q; darrow=false, offsetx=.05, offsety=.1)
     srand(11)
     nnodes, narcs = size(A)
     adjmat = getadjacence(A)
@@ -92,27 +81,28 @@ function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
             # stop position
             x1, y1 = (q[edge] > 0.)? (posx[j], posy[j]) : (posx[i], posy[i])
 
-            x0 -= offset; y0 -= offset
-            x1 -= offset; y1 -= offset
+            # get vector coordinates
+            dx = x1 - x0
+            dy = y1 - y0
+            # get norm
+            ndxy = sqrt(dx^2 + dy^2)
+            # build unit vectors
+            u = [dx, dy] / ndxy
+            v = [-dy, dx] / ndxy
 
+            xstart, ystart = [x0, y0] + offsetx * u + offsety * v
+            xstop, ystop = [x1, y1] - offsetx * u + offsety * v
 
-            xstart = x0 + alpha*(x1 - x0)
-            ystart = y0 + alpha*(y1 - y0)
-            dx = (1 - 2*alpha) * (x1 - x0)
-            dy = (1 - 2*alpha) * (y1 - y0)
-            arrow(xstart, ystart, dx, dy,
-                  head_width=0.01, head_length=0.05, fc="k")
-
+            arrow(xstart, ystart, xstop - xstart, ystop - ystart,
+                  head_width=0.03, head_length=0.05, fc="k")
         end
     end
     scatter(posx, posy, s=150, color=getshape(pb), zorder=2)
 
-
     axis("off")
-
 end
 
-"Display aonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
+"Display zonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
 function plotzone(A, flow; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
     q = mean(mean(abs.(flow),2),1)
@@ -153,7 +143,7 @@ function plotzone(A, flow; darrow=false, offset=.05, alpha=.1, ncluster=3)
         end
     end
 
-    
+
     laplacian =  getlaplacian(A,q[1,1,:])
 
     res = spectralclustering(laplacian, ncluster)
