@@ -280,6 +280,18 @@ function buildfcost(pb::Grid)
     return final_cost
 end
 
+# return elec load of grid as expression
+function getelecload(pb::Grid)
+    ex = Expr(:call, :+)
+    uindex, windex = (1, 1)
+    for (id, d) in enumerate(pb.nodes)
+        push!(ex.args, getload(d, uindex, windex))
+        uindex += ncontrols(d)
+        windex += nnoises(d)
+    end
+    return ex
+end
+
 function getrealfinalcost(pb::Grid)
     function fcost(x)
         cost = 0.

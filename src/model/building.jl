@@ -319,6 +319,26 @@ function buildload!(house::House, uindex::Int=1, windex::Int=1)
 end
 
 
+# get load of building only as Expression
+function getload(house::House, uindex::Int=1, windex::Int=1)
+    ntime = ntimesteps(house.time)
+
+    # build load corresponding to device
+    excost = Expr(:call, :+)
+    for dev in house.devices
+        load = elecload(dev, uindex)
+        uindex += ncontrols(dev)
+        push!(excost.args, load)
+    end
+
+    # build load corresponding to noise
+    for ξ in house.noises
+        push!(excost.args, elecload(ξ, windex))
+        windex += nnoise(ξ)
+    end
+    return excost
+end
+
 
 ################################################################################
 # SIMULATION DEFINITION
@@ -408,6 +428,7 @@ hasnoise(house::House, dev::Type) =  findfirst(isa.(house.noises, dev)) >= 1
 # TODO: here, setting Interface MUST happened just before building model
 # TODO: raise error if devices added after Interface
 function set!(house::House, conn::AbstractInterface)
+    # if previous house connection was unset, add a linker to the building
     if isa(house.conn, NoneInterface)
         add!(house, conn.linker)
     else
