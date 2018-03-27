@@ -59,7 +59,7 @@ function plotgraph(A)
 end
 
 "Display flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotflow(A, q; darrow=false, offsetx=.05, offsety=.1)
+function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
     srand(11)
     nnodes, narcs = size(A)
     adjmat = getadjacence(A)
@@ -68,11 +68,19 @@ function plotflow(A, q; darrow=false, offsetx=.05, offsety=.1)
 
     qmax = maximum(abs.(q))
 
+    figure()
     idarc = 1
     for edge in 1:narcs
         pos = find(x->(x!=0), A[:, edge])
+
+        # find in and outgoing nodes (just matter of convention)
+        if A[pos[1], edge] > 0
+            i, j = pos[1], pos[2]
+        else
+            i, j = pos[2], pos[1]
+        end
+
         α = abs(q[edge] / qmax)
-        i, j = pos[1], pos[2]
         plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=10*α, zorder=1)
 
         if darrow

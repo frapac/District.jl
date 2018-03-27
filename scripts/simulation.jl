@@ -12,19 +12,19 @@ using StochDynamicProgramming
 include("problem.jl")
 
 # Choose algorithm
-ALGO = "PADP"
+ALGO = "SDDP"
 
 # fix seed for reproductability
 srand(2713)
 
 # Build problem
-pb, xini = threehouse(nbins=10)
+pb, xini = twelvehouse(nbins=10)
 # Get number of nodes
 N = District.nnodes(pb)
 # Build SP model inside nodes
 build!(pb, xini, PriceInterface, maxflow=6.)
 # Build corresponding simulator
-sim = Simulator(pb, 100, generation="total", nbins=50, outsample=false)
+sim = Simulator(pb, 100, generation="reduction", nbins=50, outsample=true)
 
 # Generate policies
 if ALGO == "DADP"
