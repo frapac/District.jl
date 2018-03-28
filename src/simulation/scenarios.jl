@@ -42,7 +42,7 @@ end
 # overload to generate assessment scenarios directly with node
 genassessments(node::AbstractNode, nscen::Int) = genassessments(node.time, node.noises, nscen)
 
-function genassessments(pb::Grid, nscen::Int)
+function genassessments(pb::Grid, nscen::Int; shuff=true)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))
 
@@ -52,7 +52,11 @@ function genassessments(pb::Grid, nscen::Int)
 
     for node in pb.nodes
         nwnode = nnoises(node)
-        scenarios[:, :, iw:iw+nwnode-1] = genassessments(node, nscen)
+        nodescen = genassessments(node, nscen)
+        if shuff
+            nodescen[:] = nodescen[:, randperm(nscen), :]
+        end
+        scenarios[:, :, iw:iw+nwnode-1] = nodescen
         iw += nwnode
     end
     return scenarios
