@@ -164,9 +164,11 @@ function builddynamic(pb::Grid)
 
     for dev in pb.nodes
         # update irradiation in params
-        pint, pext = get_irradiation(dev)
-        params["pint"] = pint
-        params["pext"] = pext
+        if hasdevice(dev, R6C2)
+            pint, pext = get_irradiation(dev)
+            params["pint"] = pint
+            params["pext"] = pext
+        end
 
         # parse dynamics of nodes
         ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)

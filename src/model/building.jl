@@ -275,11 +275,13 @@ end
 
 function builddynamic(house::House)
     ntime = ntimesteps(house.time)
-    pint, pext = get_irradiation(house)
     params = Dict()
-    params["text"] = loadweather(OutdoorTemperature(), house.time)
-    params["pint"] = pint
-    params["pext"] = pext
+    if hasdevice(house, R6C2)
+        pint, pext = get_irradiation(house)
+        params["text"] = loadweather(OutdoorTemperature(), house.time)
+        params["pint"] = pint
+        params["pext"] = pext
+    end
 
     xindex = 1
     uindex = 1
