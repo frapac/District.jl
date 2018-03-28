@@ -51,11 +51,11 @@ end
 
 # swap production problem
 function prodswap!(pb::AbstractGrid, mul::Vector{Float64})
-    ntime = ntimes(pb) - 1
-    for (id, d) in enumerate(pb.nodes)
-        slambda = sizelambda(d)
-        s1 = (id-1) * slambda + 1
-        s2 = id * slambda
+    slambda = 0
+    for d in pb.nodes
+        s1 = slambda + 1
+        slambda += connectionsize(d)
+        s2 = slambda
         swap!(d, mul[s1:s2])
     end
 end

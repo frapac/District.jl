@@ -6,6 +6,7 @@ using Lbfgsb, Optim
 srand(2713)
 
 include("../graph.jl")
+include("../problem.jl")
 
 # Time span
 ts = TimeSpan(180, 1)
@@ -14,8 +15,6 @@ ts = TimeSpan(180, 1)
 nbins = 10
 
 # Build grid
-#include("toygraph.jl")
-include("../problem.jl")
 pb, xini = twelvehouse(nbins=nbins)
 
 nnodes = size(pb.nodes,1)
@@ -23,28 +22,23 @@ nnodes = size(pb.nodes,1)
 # Build SP problems in each node
 build!(pb, xini, PriceInterface)
 
-
-
-
 ##################### SDDP #####
-    nassess = 1
-    sim = Simulator(pb, nassess, generation="reduction", nbins=30)
-    params = District.get_sddp_solver()
-    params.max_iterations = 1
-    sddp = solve_SDDP(sim.model, params, 2, 1)
+nassess = 1
+sim = Simulator(pb, nassess, generation="reduction", nbins=30)
+params = District.get_sddp_solver()
+params.max_iterations = 1
+sddp = solve_SDDP(sim.model, params, 2, 1)
 
-    pol = District.HereAndNowDP(sddp.bellmanfunctions)
-    res = District.simulate(sim, pol)
+pol = District.HereAndNowDP(sddp.bellmanfunctions)
+res = District.simulate(sim, pol)
 ##################### SDDP #####
-
-
 
 
 # Time-scenario mean flow on edges
-q = mean(mean(abs.(getflow(res.controls)),2),1)
+q = getflow(res.controls)
 
 # Laplacian of incidence matrix
-laplacian =  getlaplacian(pb.net.A , q[1,1,:])
+laplacian =  getlaplacian(pb.net.A , q)
 
 # Apply spectral clustering algorithm
 ## Cluster number hardcoded
@@ -55,32 +49,31 @@ clusterresult = spectralclustering(laplacian, ncluster)
 membership = clusterresult.assignments 
 
 # Fill zones
-zones, netreduced = fillzones(pb, membership)
+zones, netreduced = District.fillzones(pb, membership)
 
 # Build zonal grid
-pbreduced = ZonalGrid(ts, zones, netreduced)
+pbreduced = District.ZonalGrid(ts, zones, netreduced)
 
 # Build SP problems in each zone
-zonebuild!(pbreduced, xini, PriceInterface)
-
-
+District.zonebuild!(pbreduced, xini, PriceInterface)
 
 
 ##################### DADP #####
-	algo = DADP(pbreduced, nsimu=1, nit=10)
+algo = DADP(pbreduced, nsimu=1, nit=1)
 
-	p = EDFPrice(ts).price[1:end-1]
+p = EDFPrice(ts).price[1:end-1]
 
-	# Initialization multiplicator
-	mul0 = p
-	for i in 1:nnodes-1
-	    mul0 = vcat(mul0, p)
-	end
+# Initialization multiplicator
+mul0 = p
+nbordernodes = sum(length.([zone.bordernodes for zone in zones]))
+for i in 1:nbordernodes-1
+    mul0 = vcat(mul0, p)
+end
 
-	# Compute f:mul and grad!:(mul, storage)
-	f, grad! = District.oracle(pbreduced, algo)
-	gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+# Compute f:mul and grad!:(mul, storage)
+f, grad! = District.oracle(pbreduced, algo)
+gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=10)
 
-	pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pbreduced.nodes])
-	res = District.simulate(sim, pol, )
+pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pbreduced.nodes])
+res = District.simulate(sim, pol, )
 ##################### DADP #####

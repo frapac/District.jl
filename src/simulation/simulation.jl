@@ -59,7 +59,7 @@ end
 
 
 # adapt Simulator for grid
-function Simulator(pb::AbstractGrid, nassess::Int;
+function Simulator(pb::Grid, nassess::Int;
                    generation="reduction", nbins=10, noptscen=100, outsample=true)
     xname, uname, wname = getcorrespondance(pb)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)

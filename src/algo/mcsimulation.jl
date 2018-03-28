@@ -11,6 +11,10 @@ function mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Ar
     return mcsimulation(sddp.spmodel, sddp.params, sddp.solverinterface, scenarios)
 end
 
+function mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3}, zone::Zone)
+    return mcsimulation(sddp.spmodel, sddp.params, sddp.solverinterface, scenarios, zone)
+end
+
 function mcsimulation(model::StochDynamicProgramming.SPModel,
                       param::StochDynamicProgramming.SDDPparameters,
                       solverProblems::Vector{JuMP.Model},
@@ -74,7 +78,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
     # Store costs of different scenarios in an array:
     costs = zeros(nb_forward)
 
-    uindex = cumsum(ncontrols.(node in zone.nodes))
+    uindex = cumsum(ncontrols.([node for node in zone.nodes]))
 
     for t=1:T-1
         for k = 1:nb_forward
@@ -87,7 +91,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
 
             # extract sensitivity
             stockTrajectories[t+1, k, :] = sol.xf
-            importation[t, k, :] = [sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
+            importation[t, k, :] = [ sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
             # and the current cost:
             costs[k] += sol.objval - sol.θ
             if t==T-1

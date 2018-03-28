@@ -59,7 +59,7 @@ nstocks(h::House) = sum(nstates.(h.devices))
 ncontrols(h::House) = sum(ncontrols.(h.devices))
 nnoises(h::House) = sum(nnoise.(h.noises))
 
-sizelambda(h::House) = ntimesteps(time)
+connectionsize(h::House) = ntimesteps(h.time) - 1
 
 function build!(house::House, x0::Vector{Float64};
                 info=:HD)
@@ -150,7 +150,8 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             ifu = ncontrols(house) + uindex
 
             if ncontrols(house.conn.linker) == 2
-                @constraint(m, ubounds[house.conn.linker] <= u[ifu-1] + u[ifu] <= ubounds[house.conn.linker])
+                @constraint(m, u[ifu-1] + u[ifu] >= ubounds(house.conn.linker)[1][1])
+                @constraint(m, u[ifu-1] + u[ifu] <= ubounds(house.conn.linker)[1][2])
             end
 
             push!(vals, u[ifu])

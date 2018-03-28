@@ -48,8 +48,8 @@ function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
         error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
               for price decomposition")
     end
-    nnodes = nnodes(pb)
-    ntime = ntimesteps(pb.nodes[1].time)
+    nnodes = District.nnodes(pb)
+    ntime = ntimes(pb)
 
     F = zeros(Float64, nnodes, ntime-1)
     Q = zeros(Float64, ntime-1, pb.net.narcs)
@@ -94,13 +94,13 @@ end
 
 function simulate!(pb::ZonalGrid, dadp::DADP)
     dadp.cost = 0.
-    nodeindex = 0.
+    nodeindex = 0
     for (idzone, zone) in enumerate(pb.nodes)
 
         c, flow = mcsimulation(dadp.models[zone.name], dadp.scen[idzone], zone)
         for (id, d) in enumerate(zone.bordernodes)
             # take average of importation flows for Node `d`
-            dadp.F[nodeindex + id, :] = mean(flow[id], 2)
+            dadp.F[nodeindex + id, :] = mean(flow[:,:,id], 2)
         end
 
         # take average of costs
