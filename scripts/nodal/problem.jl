@@ -1,18 +1,24 @@
+################################################################################
+# District.jl
+################################################################################
+# Problems to test decomposition
+# Note: Here, implement only *homogeneous* examples
+################################################################################
 
+################################################################################
 function twohouse(;nbins=1)
     # Construction of the model
     tau = 1e-1
     # Node-arc incidence matrix
     A = [1. -1.]'
 
-
     # Time span
     ts = TimeSpan(180, 1)
 
     # we build two houses
-    h1 = load(ts, ElecHouse(pv=2, heat=0, bat="bat0", nbins=nbins))
-    h2 = load(ts, ElecHouse(pv=20, heat=0, bat="", idhouse=2, nbins=nbins))
-    xini = Dict(h1=> [.55, 2.], h2=> [2.])
+    h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    xini = Dict(h1=> [.55, 2., 20, 20], h2=> [2., 20, 20])
 
     # Define network
     net = Network(ts, A)
@@ -24,16 +30,17 @@ function twohouse(;nbins=1)
     return Grid(ts, [h1, h2], net), xini
 end
 
+################################################################################
 function threehouse(;nbins=1)
     ts = TimeSpan(180, 1)
 
-    h1 = load(ts, ElecHouse(pv=4, heat=0, bat="bat0", nbins=nbins))
-    h2 = load(ts, ElecHouse(pv=0, heat=0, bat="", idhouse=2, nbins=nbins))
-    h3 = load(ts, ElecHouse(pv=20, heat=0, bat="", idhouse=3, nbins=nbins))
+    h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
 
-    xini = Dict(h1=> [.55, 2.],
-                h2=> [2.],
-                h3=> [2.])
+    xini = Dict(h1=> [.55, 2., 20., 20.],
+                h2=> [2., 20., 20.],
+                h3=> [2., 20., 20.])
 
     A = [-1 0 1;
          1 -1 0;
@@ -48,6 +55,7 @@ function threehouse(;nbins=1)
     return pb, xini
 end
 
+################################################################################
 function sixhouse(;nbins=1)
     ts = TimeSpan(180, 1)
 
@@ -82,6 +90,7 @@ function sixhouse(;nbins=1)
     return pb, xini
 end
 
+################################################################################
 function twelvehouse(;nbins=1)
     ts = TimeSpan(180, 1)
 

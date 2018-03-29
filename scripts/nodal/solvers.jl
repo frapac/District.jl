@@ -1,4 +1,8 @@
-
+################################################################################
+# District.jl
+################################################################################
+# Configure decomposition solvers
+################################################################################
 
 function runsddp(pb)
     # TODO: currently we have to define sim before calling DADP to avoid side effect

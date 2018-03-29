@@ -10,7 +10,7 @@ push!(LOAD_PATH, "..")
 using District
 using StochDynamicProgramming
 using Lbfgsb, Ipopt
-include("problem.jl")
+include("harsh.jl")
 include("solvers.jl")
 
 srand(2713)
