@@ -9,7 +9,7 @@ function runsddp(pb)
 end
 
 function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu = nsimu, nit = 10)
+    algo     = DADP(pb, nsimu = nsimu, nit = 20)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
@@ -75,7 +75,7 @@ function quantdec(pb; nsimu=1)
     prob.x = zeros(Float64, nx)
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 11)
+    addOption(prob, "max_iter", 10)
     @time solveProblem(prob)
     return prob, algo
 end

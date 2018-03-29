@@ -13,7 +13,7 @@ using Lbfgsb, Ipopt
 
 srand(2713)
 
-ALGO = "MADP"
+ALGO = "PADP"
 
 # Construction of the model
 tau = 1e-1
@@ -31,17 +31,17 @@ A = [1. -1.]'
 ts = TimeSpan(180, 1)
 
 # we build two houses
-h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=1))
-h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=1))
+h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=10))
+h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=10))
 h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=2, nbins=1))
-xini = Dict(h1=> [.55, 2., 20., 20.],
-            h2=> [2., 20., 20.],
-            h3=> [2., 20., 20.])
+xini = Dict(h1=> [.55, 2.],
+            h2=> [2.],
+            h3=> [2.])
 
 # Define network
 net = Network(ts, A)
 net.k2 = 1e-2
-net.k1 = 1e-3
+net.k1 = 0
 net.maxflow[:] = 6.
 # Define corresponding grid
 pb = Grid(ts, [h1, h2], net)
@@ -56,10 +56,10 @@ x0 = [p; p]
 ################################################################################
 if ALGO == "SDDP"
     # TODO: currently we have to define sim before calling DADP to avoid side effect
-    sim    = Simulator(pb, 1000, generation="total", nbins=50, outsample=false)
+    sim    = Simulator(pb, 100, generation="total", nbins=50, outsample=true)
     params = District.get_sddp_solver()
 
-    params.max_iterations = 15
+    params.max_iterations = 30
     sddp = @time solve_SDDP(sim.model, params, 2, 1)
 
     pol = District.HereAndNowDP(sddp.bellmanfunctions)
@@ -103,11 +103,11 @@ elseif ALGO == "IPOPT"
     setIntermediateCallback(prob, intermediate)
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 30)
+    addOption(prob, "max_iter", 10)
     sol = @time solveProblem(prob)
 ################################################################################
 elseif ALGO == "PADP"
-    algo     = PADP(pb, nsimu=1, nit=10)
+    algo     = PADP(pb, nsimu=100, nit=10)
     f, grad! = District.oracle(pb, algo)
     nnodes   = size(A, 1)
     ntime    = District.ntimes(pb) - 1
@@ -158,7 +158,8 @@ elseif ALGO == "PADP"
     #= setIntermediateCallback(prob, intermediate) =#
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 25)
+    addOption(prob, "max_iter", 10)
+    addOption(prob, "nlp_scaling_method", "none")
     @time solveProblem(prob)
 ################################################################################
 elseif ALGO == "MADP"

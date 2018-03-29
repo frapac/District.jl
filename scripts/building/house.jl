@@ -8,7 +8,7 @@ srand(10)
 ALGO = "SDDP"
 
 # load time span
-ts = TimeSpan(200, 3)
+ts = TimeSpan(180, 1)
 
 ################################################################################
 # BUILDING MODEL
@@ -25,7 +25,7 @@ District.build!(house, x0)
 ################################################################################
 # SIMULATION
 # Build simulator
-nscen = 10
+nscen = 1000
 sim = Simulator(house, nscen)
 
 # Build policy
@@ -33,7 +33,7 @@ if ALGO == "MPC"
     pol = District.MPCPolicy(District.genforecast(ts, house.noises))
 elseif ALGO == "SDDP"
     # Compute cuts :
-    sddp = @time District.solve(house, SDDP(10))
+    sddp = @time District.solve(house, SDDP(100))
     pol = District.HereAndNowDP(sddp.bellmanfunctions)
 end
 

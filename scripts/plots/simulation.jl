@@ -13,7 +13,7 @@ include("../problem.jl")
 include("graph.jl")
 
 
-pb, xini = twohouse(nbins=10)
+pb, xini = threehouse(nbins=10)
 
 N = District.nnodes(pb)
 

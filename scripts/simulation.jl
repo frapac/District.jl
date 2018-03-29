@@ -24,7 +24,7 @@ N = District.nnodes(pb)
 # Build SP model inside nodes
 build!(pb, xini, PriceInterface, maxflow=6.)
 # Build corresponding simulator
-sim = Simulator(pb, 100, generation="reduction", nbins=50, outsample=true)
+sim = Simulator(pb, 1000, generation="reduction", nbins=50, outsample=true)
 
 # Generate policies
 if ALGO == "DADP"
