@@ -12,7 +12,7 @@ include("../problem.jl")
 ts = TimeSpan(180, 1)
 
 # Noise discretization
-nbins = 10
+nbins = 1
 
 # Build grid
 pb, xini = twelvehouse(nbins=nbins)
@@ -24,9 +24,10 @@ build!(pb, xini, PriceInterface)
 
 ##################### SDDP #####
 nassess = 1
-sim = Simulator(pb, nassess, generation="reduction", nbins=30)
+sim = Simulator(pb, nassess, generation="reduction", nbins=1)
 params = District.get_sddp_solver()
-params.max_iterations = 1
+params.max_iterations = 5
+# Computing value functions 
 sddp = solve_SDDP(sim.model, params, 2, 1)
 
 pol = District.HereAndNowDP(sddp.bellmanfunctions)
@@ -54,12 +55,16 @@ zones, netreduced = District.fillzones(pb, membership)
 # Build zonal grid
 pbreduced = District.ZonalGrid(ts, zones, netreduced)
 
+xname, uname, wname = District.getcorrespondance(pbreduced)
+names = Dict(:x=>xname, :u=>uname, :w=>wname)
+
 # Build SP problems in each zone
-District.zonebuild!(pbreduced, xini, PriceInterface)
+District.zonebuild!(pbreduced, xini, PriceInterface, generation="reduction", nbins=1)
 
 
 ##################### DADP #####
-algo = DADP(pbreduced, nsimu=1, nit=1)
+algo = DADP(pbreduced, nsimu=1, nit=5)
+
 
 p = EDFPrice(ts).price[1:end-1]
 
@@ -75,5 +80,5 @@ f, grad! = District.oracle(pbreduced, algo)
 gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=10)
 
 pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pbreduced.nodes])
-res = District.simulate(sim, pol, )
+#res = District.simulate(sim, pol, )
 ##################### DADP #####

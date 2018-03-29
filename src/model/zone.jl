@@ -53,10 +53,10 @@ function swap!(zone::Zone, exch::Vector{Float64})
 end
 
 function zonebuild!(grid::ZonalGrid, xini::Dict, Interface::Type=PriceInterface;
-                maxflow=6., tau=1.)
+                maxflow=6., tau=1., generation="reduction",nbins=10)
     for zone in grid.nodes
         build!(zone, xini, PriceInterface)
-        zone.model = getproblem(zone, "reduction", 30)
+        zone.model = getproblem(zone, generation, nbins)
     end
 
 end

@@ -77,6 +77,10 @@ function show(io::IO, sim::Simulator)
     println("* Number of scenarios: ", size(sim.scenarios, 2))
 end
 
+function set!(sim::Simulator, names::Dict)
+    sim.names = names
+end
+
 
 ################################################################################
 # TODO: move Monte Carlo in another function
@@ -161,7 +165,7 @@ function getcorrespondance(h::AbstractNode)
     return xname, uname, wname
 end
 
-function getcorrespondance(pb::Grid)
+function getcorrespondance(pb::AbstractNodalGrid)
     xname = String[]
     uname = String[]
     wname = String[]
@@ -178,6 +182,21 @@ function getcorrespondance(pb::Grid)
         # one edge joins only two nodes
         @assert length(pos) == 2
         push!(uname, ("Connection $(pos[1]) <--> $(pos[2])"))
+    end
+
+    return xname, uname, wname
+end
+
+function getcorrespondance(pb::ZonalGrid)
+    xname = String[]
+    uname = String[]
+    wname = String[]
+
+    for (iin, n) in enumerate(pb.nodes)
+        xn, un, wn = getcorrespondance(n)
+        vcat(xname, xn)
+        vcat(uname, un)
+        vcat(wname, wn)
     end
 
     return xname, uname, wname

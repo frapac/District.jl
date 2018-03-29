@@ -62,6 +62,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
                       solverProblems::Vector{JuMP.Model},
                       scenarios::Array{Float64},
                       zone::Zone)
+    
 
     T = model.stageNumber
     nb_forward = size(scenarios, 2)
@@ -89,16 +90,24 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
             sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
                                               solverProblems[t], t, xt, ξt)
 
-            # extract sensitivity
-            stockTrajectories[t+1, k, :] = sol.xf
-            importation[t, k, :] = [ sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
-            # and the current cost:
-            costs[k] += sol.objval - sol.θ
-            if t==T-1
-                costs[k] += sol.θ
-            end
+            if sol.status
+                # extract sensitivity
+                
+                importation[t, k, :] = [ sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
+                stockTrajectories[t+1, k, :] = sol.xf
+                # and the current cost:
+                costs[k] += sol.objval - sol.θ
+                if t==T-1
+                    costs[k] += sol.θ
+                end
+            else
+                costs[k] = Inf
+                break
+            end        
         end
     end
+    # remove unvalid trajectories
+    isvalid = isfinite.(costs)
     return costs, importation
 end
 
