@@ -14,6 +14,9 @@ export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTan
        ThermalHeater
 export GraphConnection
 
+##################################################
+# TYPE
+#####################################################
 """
     AbstractDevice
 
@@ -21,6 +24,25 @@ Abstract type for objects that implement a device.
 """
 abstract type AbstractDevice <: AbstractModel end
 
+"""
+    AbstractHeater <: AbstractDevice
+
+Abstract Heater for objects implementing a heater.
+"""
+abstract type AbstractHeater <: AbstractDevice end
+
+"""
+    AbstractConnection <: AbstractDevice
+
+Connection implements the bridge between a node or a zone,
+and the remaining of the graph.
+"""
+abstract type AbstractConnection <: AbstractDevice end
+
+
+##################################################
+# METHODS
+##################################################
 """
     elecload(d::AbstractDevice, uindex::Int)
 
@@ -478,7 +500,6 @@ getname(chp::MicroCHP) = "μCHP"
 
 ################################################################################
 # Heaters
-abstract type AbstractHeater <: AbstractDevice end
 
 """
     struct ElecHeater <: AbstractHeater
@@ -523,7 +544,16 @@ getname(h::ThermalHeater) = "Thermal Heater"
 
 ################################################################################
 # Connection
-abstract type AbstractConnection <: AbstractDevice end
+"""
+    struct GraphConnection <: AbstractConnection
+        # minimum import from local network
+        minkva::Float64
+        # maximum import from local network
+        maxkva::Float64
+    end
+
+Connection between node and remaining network.
+"""
 struct GraphConnection <: AbstractConnection
     minkva::Float64
     maxkva::Float64
@@ -539,14 +569,3 @@ ncontrols(conn::GraphConnection) = 1
 xbounds(conn::GraphConnection) = Tuple{Float64, Float64}[]
 ubounds(conn::GraphConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
 getname(conn::GraphConnection) = "Import"
-
-
-################################################################################
-# Link between two devices
-abstract type AbstractLink end
-struct Link <: AbstractLink
-    din::AbstractModel
-    dout::AbstractModel
-end
-
-link!(n::AbstractNode, l::Link, uindex::Int, windex::Int) = link!(n, l.din, l.dout, uindex, windex)

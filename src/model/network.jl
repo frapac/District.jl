@@ -8,10 +8,17 @@
 
 export Network, Grid, build!
 
+"""
+    AbstractNetwork
+
+A Network connects different nodes together.
+This object stores the graph's structure.
+"""
 abstract type AbstractNetwork end
 
 immutable NoneNetwork <: AbstractNetwork end
 
+# TODO: split graph structure from resolution results
 mutable struct Network <: AbstractNetwork
     # number of timesteps
     ntime::Int
@@ -79,6 +86,16 @@ end
 
 getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]
 
+"""
+    flowallocation(net::Network)
+
+Compute the injection flows at nodes, as
+
+`` A * q ``
+
+with `A` node-arc incidence matrix of network and `q` current flows
+through edges (stored in `net.Q`).
+"""
 function flowallocation(net::Network)
     dg = zeros(Float64, net.ntime-1, nnodes(net))
     for t in 1:(net.ntime - 1)

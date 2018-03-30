@@ -229,6 +229,17 @@ function getcorrespondance(pb::Grid)
 end
 
 
+"""
+    getlabel(sim::Simulator, k::Symbol)
+
+Print labels of objects inside Simulator `sim`.
+
+Different choices of `k` are:
+* `:x`: print states labels ;
+* `:u`: print controls labels ;
+* `:w`: print noises labels .
+
+"""
 function getlabel(sim::Simulator, k::Symbol)
     names = sim.names[k]
     println("="^30)
