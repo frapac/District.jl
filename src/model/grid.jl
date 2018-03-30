@@ -302,7 +302,7 @@ function getrealfinalcost(pb::Grid)
             # get tank position
             postank = getposition(d, ElecHotWaterTank)
             # TODO: hardcoded!!!!
-            cost += PENAL_TANK * (2. - x[postank+xindex])
+            cost += PENAL_TANK * max(2. - x[postank+xindex], 0.)
             xindex += nstocks(d)
         end
         return cost
