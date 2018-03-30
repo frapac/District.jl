@@ -30,7 +30,7 @@ using Gurobi
 #= using Clp =#
 
 "Get LP solver."
-get_solver() = Gurobi.GurobiSolver(OutputFlag=false, MIPGap=.01)
+get_solver() = Gurobi.GurobiSolver(OutputFlag=false, Method=0)
 
 
 "Get StochDynamicProgramming SDDP solver."
