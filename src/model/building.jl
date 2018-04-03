@@ -180,27 +180,46 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
     return costm
 end
 
-buildlink!(house::House, uindex::Int=0, windex::Int=0) = link!.(house, house.links, uindex, windex)
 
-# TODO: clean definition of final cost
+################################################################################
+# Final cost definition
+################################################################################
+
+# add a final penalty for considered devices
+# WARNING: penalty should be given as an expression dependent of `x`.
+# Ex:   :(2 * max(0, 2 - x))
+function penalize!(house::House, dev::Type, p::Expr)
+    pos = getposition(house, dev)
+    p = MacroTools.postwalk(x -> x == :x ? Expr(:ref, :(xf), pos): x, p)
+    add!(house.billing.finalcost, p)
+end
+
+# If final penalty is a max, we linearize it in optimization model
+function addmax(model::JuMP.Model, z, ex::Expr)
+    xf = model[:xf]
+    for i in 2:endof(ex.args)
+        f = eval(:(xf -> $(ex.args[i])))
+        @constraint(model, z >= Base.invokelatest(f, xf))
+    end
+end
+
+# WIP: definition of final cost for a house
+# WARNING: We should not use Base.invokelatest
 function buildfcost(house::House)
-    #= fcost = house.billing.finalcost =#
+    fcost = house.billing.finalcost
     function final_cost(model, m)
         alpha = m[:alpha]
-        #= w = JuMP.getvariable(m, :w) =#
-        x = m[:x]
-        u = m[:u]
-        xf = m[:xf]
-        z1 = @JuMP.variable(m, lowerbound=0)
-        postank = try getposition(house, ElecHotWaterTank) catch 2 end
-        @JuMP.constraint(m, z1 >= PENAL_TANK * (2. - xf[postank]))
 
-        #= z1 = @JuMP.variable(m, [1:length(fcost)], lowerbound=0) =#
-        #= for id in 1:length(fcost) =#
-        #=     idx = getposition(house, f) =#
-        #=     @JuMP.constraint(m, z1[id] >= fcost.penals[id](xf[idx])) =#
-        #= end =#
-        @JuMP.constraint(m, alpha == sum(z1))
+        z = @JuMP.variable(m, [1:npenal(fcost)])
+        # we add iteratively each max penalization as constraint
+        for i in 1:npenal(fcost)
+            addmax(m, z[i], fcost.ExprMax[i])
+        end
+
+        # add final cost as expression previously parsed,
+        # with max linearized
+        final = eval(:(z -> $(fcost.fcost_parsed)))
+        @JuMP.constraint(m, alpha == Base.invokelatest(final, z))
     end
     return final_cost
 end
@@ -208,6 +227,7 @@ end
 
 # TODO: add DH final cost
 function final_cost_dh(model, m)
+    error("Unable to define final cost in DH: function currently broken")
     alpha = m[:alpha]
     # get number of random noises
     ns = model.noises[end-1].supportSize
@@ -377,6 +397,9 @@ realfinalcost(xf) = PENAL_TANK*max(0., 2. - xf[2])
 # LINKERS
 ################################################################################
 join!(house::House, din::AbstractModel, dout::AbstractModel) = push!(house.links, Link(din, dout))
+
+buildlink!(house::House, uindex::Int=0, windex::Int=0) = link!.(house, house.links, uindex, windex)
+
 # TODO: use thermalload instead
 # We can link EHWT only to DHW demands
 function link!(house::House, hwt::ElecHotWaterTank, w::AbstractUncertainty, uind::Int, wind::Int)

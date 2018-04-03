@@ -9,6 +9,7 @@
 #     data/tariffs
 ################################################################################
 
+# TODO: document this file
 ################################################################################
 export EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice, RecoursePrice
 export NightSetPoint, EDFInjection
@@ -125,15 +126,58 @@ setpoint(c::ComfortPrice, t::Int) = c.setpoint.setpoint[t]
 
 
 ################################################################################
+# Final cost definition
+struct FinalCost
+    fcost::Expr
+    fcost_parsed::Expr
+    ExprMax::Vector{Expr}
+end
+FinalCost() = FinalCost(Expr(:call, :+), Expr(:call, :+), Expr[])
+
+npenal(f::FinalCost) = length(f.ExprMax)
+
+hasmax(x) = x == :max
+hasmax(x::Expr) = any(hasmax.(x.args))
+
+function replacemax!(ex::Expr, max_expr=Expr[], zindex::Int=1)
+    for pos in find(hasmax.(ex.args))
+        subex = ex.args[pos]
+        if subex.args[1] == :max
+            push!(max_expr, copy(subex))
+            zindex += 1
+            ex.args[pos] = :(z[$zindex])
+        else
+            zindex = replacemax!(ex.args[pos], max_expr, zindex)
+        end
+    end
+    return zindex
+end
+
+function add!(f::FinalCost, ex::Expr)
+    ex_p = deepcopy(ex)
+    if hasmax(ex_p)
+        maxex = Expr[]
+        zindex = length(f.ExprMax)
+        replacemax!(ex_p, maxex, zindex)
+        push!(f.ExprMax, maxex...)
+    end
+
+    push!(f.fcost.args, ex)
+    push!(f.fcost_parsed.args, ex_p)
+end
+
+
+################################################################################
 # Billing
 mutable struct Billing <: AbstractBilling
     elec::AbstractElecPrice
     injection::AbstractElecPrice
     gas::AbstractGasPrice
     comfort::AbstractComfortPrice
+    finalcost::FinalCost
 end
 
-Billing() = Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort())
+Billing() = Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort(), FinalCost())
 # type dispatch to set prices
 set!(bill::Billing, p::AbstractElecPrice) = bill.elec = p
 set!(bill::Billing, p::AbstractComfortPrice) = bill.comfort = p

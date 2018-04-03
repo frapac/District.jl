@@ -167,9 +167,9 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
 
             # update
             # TODO
-            #= costs[k] += simulator.realcost(t, x, u, ξ) =#
-            m = policy.problem
-            costs[k] += getobjectivevalue(m) - getvalue(m[:alpha])
+            costs[k] += simulator.realcost(t, x, u, ξ)
+            #= m = policy.problem =#
+            #= costs[k] += getobjectivevalue(m) - getvalue(m[:alpha]) =#
             stocks[t+1, k, :] = xf
             controls[t, k, :] = u
         end
