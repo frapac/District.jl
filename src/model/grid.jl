@@ -66,7 +66,15 @@ end
 transswap!(pb::Grid, mul::Vector{Float64}) = swap!(pb.net, mul)
 # update graph exchange in nodes subproblems
 function swap!(pb::Grid, mul::Vector{Float64})
-    prodswap!(pb, mul)
+    # switch, to take care if the iterate is upon nodes flow F
+    # or edges flows Q
+    if length(mul) == (ntimes(pb)-1)*nnodes(pb)
+        pmul = mul
+    elseif length(mul) == (ntimes(pb)-1)*narcs(pb)
+        pmul = -flowallocation(pb.net, reshape(mul, pb.net.ntime -1, pb.net.narcs))
+    end
+
+    prodswap!(pb, pmul)
     transswap!(pb, mul)
 end
 
