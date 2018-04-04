@@ -11,7 +11,8 @@ module District
 using JLD
 using JuMP
 using Scenarios, StochDynamicProgramming
-using JSON, ProgressMeter
+using JSON, ProgressMeter, MacroTools
+
 
 import Base: show
 

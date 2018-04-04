@@ -9,6 +9,7 @@
 #     data/tariffs
 ################################################################################
 
+# TODO: document this file
 ################################################################################
 export EDFPrice, EPEXPrice, ComfortPrice, EngieGasPrice, RecoursePrice
 export NightSetPoint, EDFInjection
@@ -125,43 +126,60 @@ setpoint(c::ComfortPrice, t::Int) = c.setpoint.setpoint[t]
 
 
 ################################################################################
+# Final cost definition
+struct FinalCost
+    fcost::Expr
+    fcost_parsed::Expr
+    ExprMax::Vector{Expr}
+end
+FinalCost() = FinalCost(Expr(:call, :+), Expr(:call, :+), Expr[])
+
+npenal(f::FinalCost) = length(f.ExprMax)
+
+hasmax(x) = x == :max
+hasmax(x::Expr) = any(hasmax.(x.args))
+
+function replacemax!(ex::Expr, max_expr=Expr[], zindex::Int=1)
+    for pos in find(hasmax.(ex.args))
+        subex = ex.args[pos]
+        if subex.args[1] == :max
+            push!(max_expr, copy(subex))
+            zindex += 1
+            ex.args[pos] = :(z[$zindex])
+        else
+            zindex = replacemax!(ex.args[pos], max_expr, zindex)
+        end
+    end
+    return zindex
+end
+
+function add!(f::FinalCost, ex::Expr)
+    ex_p = deepcopy(ex)
+    if hasmax(ex_p)
+        maxex = Expr[]
+        zindex = length(f.ExprMax)
+        replacemax!(ex_p, maxex, zindex)
+        push!(f.ExprMax, maxex...)
+    end
+
+    push!(f.fcost.args, ex)
+    push!(f.fcost_parsed.args, ex_p)
+end
+
+
+################################################################################
 # Billing
 mutable struct Billing <: AbstractBilling
     elec::AbstractElecPrice
     injection::AbstractElecPrice
     gas::AbstractGasPrice
     comfort::AbstractComfortPrice
+    finalcost::FinalCost
 end
 
-Billing() = Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort())
+Billing() = Billing(NoneElecPrice(), NoneElecPrice(), NoneGasPrice(), NoneComfort(), FinalCost())
 # type dispatch to set prices
 set!(bill::Billing, p::AbstractElecPrice) = bill.elec = p
 set!(bill::Billing, p::AbstractComfortPrice) = bill.comfort = p
 set!(bill::Billing, p::AbstractGasPrice) = bill.gas = p
 set!(bill::Billing, p::EDFInjection) = bill.injection = p
-
-
-################################################################################
-# Final penalization
-# Implementation of function K
-struct PiecewiseLinearCost <: AbstractPenalization
-    threshold::Float64
-    penalization::Float64
-end
-(p::PiecewiseLinearCost)(x::Float64) = p.penalization*max(0, p.threshold - x)
-(p::PiecewiseLinearCost)(x::JuMP.Variable) = p.penalization*(p.threshold - x)
-
-
-struct QuadraticCost <: AbstractPenalization
-    center::Float64
-    penalization::Float64
-end
-(p::QuadraticCost)(x::T) where {T<:Union{Float64, JuMP.Variable}} = p.penalization*(p.threshold - x)^2
-
-
-#= struct FinalCost <: AbstractFinalCost =#
-#=     devices::Vector{AbstractDevice} =#
-#=     penals::Vector{AbstractPenalization} =#
-#= end =#
-#= FinalCost() = FinalCost([], []) =#
-#= #1= (p::FinalCost)(x::Real) = sum.(p =1# =#

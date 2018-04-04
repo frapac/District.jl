@@ -167,9 +167,9 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
 
             # update
             # TODO
-            #= costs[k] += simulator.realcost(t, x, u, ξ) =#
-            m = policy.problem
-            costs[k] += getobjectivevalue(m) - getvalue(m[:alpha])
+            costs[k] += simulator.realcost(t, x, u, ξ)
+            #= m = policy.problem =#
+            #= costs[k] += getobjectivevalue(m) - getvalue(m[:alpha]) =#
             stocks[t+1, k, :] = xf
             controls[t, k, :] = u
         end
@@ -229,6 +229,17 @@ function getcorrespondance(pb::Grid)
 end
 
 
+"""
+    getlabel(sim::Simulator, k::Symbol)
+
+Print labels of objects inside Simulator `sim`.
+
+Different choices of `k` are:
+* `:x`: print states labels ;
+* `:u`: print controls labels ;
+* `:w`: print noises labels .
+
+"""
 function getlabel(sim::Simulator, k::Symbol)
     names = sim.names[k]
     println("="^30)

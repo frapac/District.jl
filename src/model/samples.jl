@@ -69,6 +69,7 @@ function load(ts::TimeSpan, prof::ElecHouse)
 
     hwt = ElecHotWaterTank("ehwt0")
     add!(house, hwt)
+    penalize!(house, ElecHotWaterTank, :(1. * max(0, 2 -x)))
 
     if hasheater(prof)
         thm = R6C2(prof.env)
