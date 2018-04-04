@@ -108,6 +108,7 @@ function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
 
         end
     end
+    
     scatter(posx, posy, s=150, color=getshape(pb), zorder=2)
 
 
@@ -116,7 +117,7 @@ function plotflow(A, q; darrow=false, offset=.05, alpha=.1)
 end
 
 "Display zonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotzone(A, q; darrow=false, offset=.05, alpha=.1, ncluster=3)
+function plotzone(A, membership; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
 
     srand(11)
@@ -155,21 +156,9 @@ function plotzone(A, q; darrow=false, offset=.05, alpha=.1, ncluster=3)
         end
     end
 
-    
-    laplacian =  getlaplacian(A,q)
-
-    res = spectralclustering(laplacian, ncluster)
-
-
-    # Coloring nodes
-    membership = res.assignments
 
     scatter(posx, posy, s=150, c=membership, zorder=2)
     axis("off")
     title("cluster")
-
-    # figure()
-    # plot(eigvals(laplacian))
-    # plot([ncluster, ncluster], [0, maximum(eigvals(laplacian))], c=(0., 0., 1.), lw=1, zorder=1 )
 
 end

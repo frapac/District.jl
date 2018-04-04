@@ -4,7 +4,7 @@
 # Define interface between node and the rest of the graph
 ################################################################################
 
-export FlowInterface, PriceInterface, QuadInterface
+export FlowInterface, PriceInterface, QuadInterface, ZoneInterface
 
 abstract type AbstractInterface end
 
@@ -41,3 +41,12 @@ end
 
 swap!(p::QuadInterface, v::Array{Float64}) = copy!(p.values, v)
 flow!(p::QuadInterface, f::Array{Float64}) = copy!(p.penal, f)
+
+# Interface for zone
+struct ZoneInterface <: AbstractInterface
+	values::Array{Float64}
+	linker::Array{Int64}
+end
+
+swap!(p::ZoneInterface, v::Array{Float64}) = copy!(p.values, v)
+

@@ -27,10 +27,11 @@ Grid(ts::AbstractTimeSpan) = Grid(ts, AbstractNode[], NoneNetwork())
 nnodes(pb::AbstractNodalGrid) = length(pb.nodes)
 narcs(pb::AbstractGrid) = pb.net.narcs
 ntimes(pb::AbstractGrid) = ntimesteps(pb.ts)
+ninjection(pb::Grid) = 0 
 
 
 # Build models inside `grid` for decomposition
-function build!(grid::Grid, xini::Dict, Interface::Type=PriceInterface;
+function build!(grid::AbstractNodalGrid, xini::Dict, Interface::Type=PriceInterface;
                 maxflow=6., tau=1.)
     for d in grid.nodes
         price = zeros(Float64, ntimes(grid)-1)
@@ -107,12 +108,19 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
         windex += nnoises(d)
     end
 
+
     # get global initial position
     x0 = initpos(pb)
     xb = vcat(xbounds.(pb.nodes)...)
     ub = vcat(ubounds.(pb.nodes)...)
     # add flow control
     ub = vcat(ub, [(-m, m) for m in pb.net.maxflow])
+
+    # TO DO : choose proper bounds
+    for i in 1:ninjection(pb)
+        m = pb.net.maxflow[1]
+        ub = vcat(ub, [(-m, m)])
+    end
 
     # In order ...
     # reset and rebuild linkage in nodes (mainly update Expr junction)
@@ -192,17 +200,23 @@ function buildcost(pb::AbstractNodalGrid)
         cost = AffExpr(0.)
         xindex = 0
         uindex = 0
+        # Instantaneous cost of all nodes
         for d in pb.nodes
             cost += objective(d, xindex, uindex)(m, t, x, u, w)
             xindex += nstocks(d)
             uindex += ncontrols(d)
         end
+        # Zone connection cost
+        ninj = ninjection(pb)
+        if ninj > 0
+            cost += objective(pb)(m, t, x, u, w)
+        end
         # transport cost
         na = narcs(pb)
         # take abs |.| of flow q
         @variable(m, qp[1:na])
-        @constraint(m, qp .>=  u[end-na+1:end])
-        @constraint(m, qp .>= -u[end-na+1:end])
+        @constraint(m, qp .>=  u[end-ninj-na+1:end-ninj])
+        @constraint(m, qp .>= -u[end-ninj-na+1:end-ninj])
         # add transportation cost to cost
         cost += pb.net.k1*sum(qp) + pb.net.k2 * dot(qp, qp)
         return cost
@@ -219,10 +233,18 @@ getflowindex(pb::AbstractNodalGrid) = cumsum(ncontrols.(pb.nodes))
 # Build coupling constraint Aq + F for a grid.
 function buildconstr(pb::AbstractNodalGrid)
     na = narcs(pb)
+    ninj = ninjection(pb)
     A = pb.net.A
     findex = getflowindex(pb)
 
-    constr(t, x, u, w) = A * u[end-na+1:end] + u[findex]
+    function constr(t, x, u, w)
+        cstr = A * u[end-ninj-na+1:end-ninj] + u[findex]
+        if ninj > 0
+            cstr += pb.conn.linker * u[end-ninj+1:end]
+        end
+        return cstr
+    end 
+    return constr
 end
 
 # Build probability laws for grid `pb`.

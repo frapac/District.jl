@@ -7,19 +7,17 @@
 include("../../scripts/graph.jl")
 
 mutable struct Zone <: AbstractNodalGrid
-    # name of House
+    # name of Zone
     name::Symbol
     # Time span
     ts::AbstractTimeSpan
     # Nodes
     nodes::Vector{AbstractNode}
-    # Nodes
-    bordernodes::Vector{AbstractNode}
     # Border nodes index
     borderindex::Dict{AbstractNode, Int64}
     # Edges
     net::AbstractNetwork
-    # Inteface with graph
+    # Connection interface
     conn::AbstractInterface
     # SP model
     model
@@ -34,93 +32,74 @@ struct ZonalGrid <: AbstractGrid
     net::AbstractNetwork
 end
 
-Zone(ts::AbstractTimeSpan, nodes::Vector{AbstractNode}, bordernodes::Vector{AbstractNode}, borderindex::Dict{AbstractNode, Int64}, net::AbstractNetwork)= Zone(gensym(), ts, 
-                                                                                                                                                        nodes, bordernodes, 
-                                                                                                                                                        borderindex, net, 
-                                                                                                                                                        NoneInterface(),nothing)
-
-nnodes(pb::ZonalGrid) = sum(length.([zone.bordernodes for zone in pb.nodes]))
-connectionsize(zone::Zone) = (ntimes(zone) - 1) * length(zone.bordernodes)
-
-function swap!(zone::Zone, exch::Vector{Float64})
-    slambda = 0
-    for d in zone.bordernodes
-        s1 = slambda + 1
-        slambda += connectionsize(d)
-        s2 = slambda
-        swap!(d, exch[s1:s2])
-    end
+function Zone(ts::AbstractTimeSpan, 
+    nodes::Vector{AbstractNode}, 
+    borderindex::Dict{AbstractNode, Int64}, 
+    net::AbstractNetwork)
+    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),nothing)
 end
 
-function zonebuild!(grid::ZonalGrid, xini::Dict, Interface::Type=PriceInterface;
+nnodes(pb::ZonalGrid) = sum(length.([zone.borderindex for zone in pb.nodes]))
+nbordernodes(pb::Zone) = length(pb.borderindex)
+connectionsize(pb::Zone) = (ntimes(pb) - 1) * nbordernodes(pb)
+ninjection(pb::Zone) = nbordernodes(pb)
+
+
+function swap!(zone::Zone, exch::Vector{Float64})
+    swap!(zone.conn, exch)
+end
+
+function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
                 maxflow=6., tau=1., generation="reduction",nbins=10)
     for zone in grid.nodes
+        price = zeros(Float64, connectionsize(zone))
+        linker = zeros(Int64, nnodes(zone), nbordernodes(zone))
+
+        j = 1
+        for i in collect(values(zone.borderindex))
+            linker[i, j] = 1
+            j += 1
+        end
+
+        conn = Interface(price, linker)
         build!(zone, xini, PriceInterface)
+        zone.conn = conn
         zone.model = getproblem(zone, generation, nbins)
     end
 
 end
 
 
-function build!(zone::Zone, xini::Dict, Interface::Type=PriceInterface;
-                maxflow=6., tau=1.)
-    conn = NoneInterface()
+function reducepb(pb::Grid, membership::Vector{Int})
     
-    for d in zone.nodes
-        price = zeros(Float64, ntimes(zone)-1)
-        # instantiate connection interface
-        conn = Interface(price, GraphConnection(maxflow))
-        
-        # add connection to particular device
-        set!(d, conn)
 
-        build!(d, xini[d])
-    end
-
-    for d in zone.bordernodes
-        price = zeros(Float64, ntimes(zone)-1)
-        # instantiate connection interface
-        conn = Interface(price, InOutGraphConnection(maxflow))
-        
-        # add connection to particular device
-        set!(d, conn)
-
-        build!(d, xini[d])
-    end
-
-    zone.conn = conn
-end
-
-
-
-function initvector(vector::Vector{Vector{Float64}})
-    for i in 1:size(vector,1)
-        vector[i] = []
-    end
-end
-
-function fillzones(pb::Grid, membership::Vector{Int})
-    
-    # Total number of zones
-    nzones = maximum(membership)
-    # Total number of nodes
-    nnodes = size(pb.nodes,1)
-
-    # Adjacency matrix
-    adjmatrix = getadjacence(pb.net.A)
     
     # Instantiate zones 
     zones = Zone[]
 
+    fillzones!(pb, zones, membership)
+
+    incidence = reducenetwork(pb, zones, membership)
+
+
+    return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)) 
+end
+
+function fillzones!(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
+    
+    # Adjacency matrix
+    adjacencymatrix = getadjacence(pb.net.A)
+    # Total number of nodes
+    nnodes = size(pb.nodes,1)
+    # Total number of zones
+    nzones = maximum(membership)
     # Map between nodes and their index
     index = Dict(pb.nodes[i]=> i for i in 1:nnodes)
 
-    # Fill the vectors zonenode, zoneborder and borderindex
+    # Fill the vectors zonenode, and borderindex
     for z in 1:nzones
-         # Vector that associates a zone to its nodes
+        # Vector that associates a zone to its nodes
         zonenode = AbstractNode[]
-        # Vector that associates a zone to its border nodes
-        zoneborder = AbstractNode[]
         # Vector that associates a zone to a mapping between border nodes and their index in the node list 
         borderindex = Dict{AbstractNode,Int64}()
         # Index of a border node in the node list
@@ -134,8 +113,7 @@ function fillzones(pb::Grid, membership::Vector{Int})
                 bindex += 1    
                 # If node i has a neighbour out of its zone
                 for j in 1:nnodes
-                    if (membership[i] != membership[j]) && (adjmatrix[i,j] == 1)
-                        push!(zoneborder, pb.nodes[i])
+                    if (membership[i] != membership[j]) && (adjacencymatrix[i,j] == 1)
                         get!(borderindex, pb.nodes[i], bindex)
                         break
                     end
@@ -144,42 +122,44 @@ function fillzones(pb::Grid, membership::Vector{Int})
         end
     
 
-        nznodes = size(zonenode,1)
-        nzarcs = sum(sum(adjmatrix[ [index[zonenode[i]] for i in 1:nznodes] , [index[zonenode[i]] for i in 1:nznodes] ]))/2
-        incidence = zeros(Float64, nznodes, nzarcs)
-        iarc = 1
+        nzonenodes = size(zonenode,1)
+        adjmat = adjacencymatrix[ [index[zonenode[i]] for i in 1:nzonenodes] , [index[zonenode[i]] for i in 1:nzonenodes] ]
+        
+        A, bounds = buildincidence(adjmat)
 
-        for i in 1:nznodes-1
-            for j in (i+1):nznodes
-                if adjmatrix[ index[zonenode[i]] , index[zonenode[j]] ]  == 1 
-                    incidence[i, iarc] = 1
-                    incidence[j, iarc] = -1
-                    iarc += 1
-                end
-            end
-        end
-
-        push!(zones, Zone(pb.ts, zonenode, zoneborder, borderindex, Network(pb.ts, incidence)))
+        push!(zones, Zone(pb.ts, zonenode, borderindex, Network(pb.ts, A)))
     end
+end
+
+function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
+    
+    # Adjacency matrix
+    adjacencymatrix = getadjacence(pb.net.A)
+    # Total number of nodes
+    nnodes = size(pb.nodes,1)
+    # Map between nodes and their index
+    index = Dict(pb.nodes[i]=> i for i in 1:nnodes)
 
     # Total number of border nodes
-    nbordernodes = sum(length.([zone.bordernodes for zone in zones]))
+    nbordernodes = sum(length.([zone.borderindex for zone in zones]))
     # Vector of all border nodes
     allbordernodes = AbstractNode[]
     for zone in zones
-        for h in zone.bordernodes
-            push!(allbordernodes, h)
+        for i in collect(values(zone.borderindex))
+            push!(allbordernodes, zone.nodes[i])
         end
     end
-    nborderarcs = sum(sum(adjmatrix[ [index[allbordernodes[i]] for i in 1:nbordernodes] , [index[allbordernodes[i]] for i in 1:nbordernodes] ]))/2
 
+    connexion = adjacencymatrix[ [index[allbordernodes[i]] for i in 1:nbordernodes] , [index[allbordernodes[i]] for i in 1:nbordernodes] ]
+    nborderarcs = floor(Int, sum(connexion .> 0.)/2)
+    
     # Reduced incidence matrix 
     incidence = zeros(Float64, nbordernodes, nborderarcs)
     iarc = 1
 
     for i in 1:nbordernodes-1
         for j in i+1:nbordernodes
-            if (membership[index[allbordernodes[i]]] != membership[index[allbordernodes[j]]]) &&  (adjmatrix[ index[allbordernodes[i]], index[allbordernodes[j]] ] == 1)
+            if (membership[index[allbordernodes[i]]] != membership[index[allbordernodes[j]]]) &&  (adjacencymatrix[ index[allbordernodes[i]], index[allbordernodes[j]] ] == 1)
                 incidence[i, iarc] = 1
                 incidence[j, iarc] = -1
                 iarc += 1
@@ -187,6 +167,30 @@ function fillzones(pb::Grid, membership::Vector{Int})
         end
     end
 
+    return incidence
+end
 
-    return zones, Network(pb.ts, incidence)
+function objective(pb::Zone)
+    ninj = ninjection(pb)
+
+    function costm(m, t, x, u, w)
+        vals = JuMP.Variable[]
+        coefs = Float64[]
+
+        # add decomposition price
+        if isa(pb.conn, ZoneInterface)
+            # add < λ, F_out >
+            u = m[:u]
+
+            vcat(vals, u[end-ninj+1:end])
+            vcat(coefs, [ pb.conn.values[t+nb*(ntimes(pb)-1)] for nb in 0:ninj-1 ])
+            expr = JuMP.AffExpr(vals, coefs, 0.0)
+            for i in 1:ninj
+                expr += JuMP.QuadExpr([u[end-i+1]], [u[end-i+1]], [1e-2], 0.)
+            end
+        end
+        return expr
+    end
+
+    return costm
 end

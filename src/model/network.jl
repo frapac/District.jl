@@ -57,12 +57,12 @@ nnodes(net::Network) = size(net.A, 1)
 swap!(net::Network, mul) = net.λ[:] = mul
 
 """Build incidence matrix and return flows' bounds."""
-function buildincidence{T}(connexion::Matrix{T})
+function buildincidence(connexion::Array{Float64})
     nnodes = size(connexion, 1)
     narcs = floor(Int, sum(connexion .> 0.)/2)
 
     # incidence matrix
-    A = zeros(Int, nnodes, narcs)
+    A = zeros(Int64, nnodes, narcs)
 
     ic = 0
     bounds = Float64[]

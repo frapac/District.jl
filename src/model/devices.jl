@@ -431,22 +431,14 @@ struct GraphConnection <: AbstractConnection
     maxkva::Float64
 end
 
-struct InOutGraphConnection <: AbstractConnection
-    minkva::Float64
-    maxkva::Float64
-end
-
 # By default, Node is prosumer
 GraphConnection(kva::Float64) = GraphConnection(-kva, kva)
-InOutGraphConnection(kva::Float64) = InOutGraphConnection(-kva, kva)
 
 parsedevice(conn::AbstractConnection, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
 
-elecload(conn::GraphConnection, uindex::Int) = :(-u[$uindex])
-elecload(conn::InOutGraphConnection, uindex::Int) = :(-u[$uindex] -u[$(uindex+1)])
+elecload(conn::AbstractConnection, uindex::Int) = :(-u[$uindex])
 nstates(conn::AbstractConnection) = 0
-ncontrols(conn::GraphConnection) = 1
-ncontrols(conn::InOutGraphConnection) = 2
+ncontrols(conn::AbstractConnection) = 1
 xbounds(conn::AbstractConnection) = Tuple{Float64, Float64}[]
 ubounds(conn::AbstractConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
 getname(conn::AbstractConnection) = "Import"

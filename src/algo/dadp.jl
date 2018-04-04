@@ -44,9 +44,16 @@ end
 Build DADP solver.
 """
 function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
-    if ~checkconsistency(pb, PriceInterface)
-        error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
-              for price decomposition")
+    if typeof(pb) == District.ZonalGrid
+        if ~checkconsistency(pb, ZoneInterface)
+            error("Wrong interfaces inside `pb.nodes`. Use `ZoneInterface`
+                     for price decomposition")
+        end
+    else
+        if ~checkconsistency(pb, PriceInterface)
+            error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
+                  for price decomposition")
+        end
     end
     nnodes = District.nnodes(pb)
     ntime = ntimes(pb)
@@ -98,14 +105,14 @@ function simulate!(pb::ZonalGrid, dadp::DADP)
     for (idzone, zone) in enumerate(pb.nodes)
 
         c, flow = mcsimulation(dadp.models[zone.name], dadp.scen[idzone], zone)
-        for (id, d) in enumerate(zone.bordernodes)
+        for idborder in 1:nbordernodes(zone)
             # take average of importation flows for Node `d`
-            dadp.F[nodeindex + id, :] = mean(flow[:,:,id], 2)
+            dadp.F[nodeindex + idborder, :] = mean(flow[:,:,idborder], 2)
         end
 
         # take average of costs
         dadp.cost -= mean(c)
-        nodeindex += length(zone.bordernodes)
+        nodeindex += length(zone.borderindex)
     end
 
     # add transportation cost

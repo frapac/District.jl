@@ -149,11 +149,6 @@ function objective(house::House, xindex::Int=0, uindex::Int=0)
             u = m[:u]
             ifu = ncontrols(house) + uindex
 
-            if ncontrols(house.conn.linker) == 2
-                @constraint(m, u[ifu-1] + u[ifu] >= ubounds(house.conn.linker)[1][1])
-                @constraint(m, u[ifu-1] + u[ifu] <= ubounds(house.conn.linker)[1][2])
-            end
-
             push!(vals, u[ifu])
             push!(coefs, house.conn.values[t])
             expr = JuMP.AffExpr(vals, coefs, 0.0)

@@ -66,10 +66,11 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
 
     T = model.stageNumber
     nb_forward = size(scenarios, 2)
+    ninj = ninjection(zone)
 
     stockTrajectories = zeros(T, nb_forward, model.dimStates)
     # import is last position in controls
-    importation = zeros(T - 1, nb_forward, length(zone.bordernodes))
+    importation = zeros(T - 1, nb_forward, ninj)
 
     # Set first value of stocks equal to x0:
     for k in 1:nb_forward
@@ -79,7 +80,6 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
     # Store costs of different scenarios in an array:
     costs = zeros(nb_forward)
 
-    uindex = cumsum(ncontrols.([node for node in zone.nodes]))
 
     for t=1:T-1
         for k = 1:nb_forward
@@ -93,21 +93,20 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
             if sol.status
                 # extract sensitivity
                 
-                importation[t, k, :] = [ sol.uopt[uindex[zone.borderindex[bn]]] for bn in zone.bordernodes]
+                importation[t, k, :] = sol.uopt[end-ninj+1:end]
                 stockTrajectories[t+1, k, :] = sol.xf
                 # and the current cost:
                 costs[k] += sol.objval - sol.θ
                 if t==T-1
                     costs[k] += sol.θ
-                end
+                end       
             else
+                
                 costs[k] = Inf
                 break
-            end        
+            end
         end
     end
-    # remove unvalid trajectories
-    isvalid = isfinite.(costs)
     return costs, importation
 end
 

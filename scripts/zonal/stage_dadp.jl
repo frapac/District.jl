@@ -49,17 +49,11 @@ clusterresult = spectralclustering(laplacian, ncluster)
 # Get node assignments to clusters
 membership = clusterresult.assignments 
 
-# Fill zones
-zones, netreduced = District.fillzones(pb, membership)
-
 # Build zonal grid
-pbreduced = District.ZonalGrid(ts, zones, netreduced)
-
-xname, uname, wname = District.getcorrespondance(pbreduced)
-names = Dict(:x=>xname, :u=>uname, :w=>wname)
+pbreduced = District.reducepb(pb, membership)
 
 # Build SP problems in each zone
-District.zonebuild!(pbreduced, xini, PriceInterface, generation="reduction", nbins=1)
+District.build!(pbreduced, xini, ZoneInterface, generation="reduction", nbins=1)
 
 
 ##################### DADP #####
@@ -70,7 +64,7 @@ p = EDFPrice(ts).price[1:end-1]
 
 # Initialization multiplicator
 mul0 = p
-nbordernodes = sum(length.([zone.bordernodes for zone in zones]))
+nbordernodes = sum(District.nbordernodes.([zone for zone in pbreduced.nodes]))
 for i in 1:nbordernodes-1
     mul0 = vcat(mul0, p)
 end
