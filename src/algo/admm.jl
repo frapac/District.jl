@@ -26,11 +26,17 @@ mutable struct ADMM <: AbstractDecompositionSolver
     # quad penalty term
     τ::Float64
     # stopping criterion
+    ## primal tolerance
     rtol::Float64
+    ## dual tolerance
     gtol::Float64
+    # number of simulation to estimate oracle
     nsimu::Int
+    # number of SDDP iterations
     nit::Int
+    # maximum number of iteration in ADMM
     maxit::Int
+    # SP models
     models::Dict
 end
 """
@@ -88,6 +94,7 @@ function ∇f(pb::Grid, dadp::ADMM)
     for t in 1:(dadp.ntime - 1)
         f = dadp.F[:, t]
         q = dadp.Q[t, :]
+        # get equilibrium
         dg[t, :] = (pb.net.A*q + f)[:]
     end
     return dg[:]
@@ -95,17 +102,18 @@ end
 
 
 
-"""ADMM algorithm.
+"""
+    solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
 
-We use a solver to perform the gradient descent.
+ADMM algorithm.
 """
 function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
     # get initial position
     nx = length(xini)
     λ = copy(xini)
-    # TODO: initilization of flow F ???
     equilibrium = zeros(Float64, nx)
 
+    # TODO: initilization of flow F ???
     F  = zeros(Float64, nx)
     zp = zeros(Float64, nx)
     z  = zeros(Float64, nx)
@@ -117,7 +125,7 @@ function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
 
     for it in 1:solver.maxit
         tic()
-        ###
+        ### PRODUCTION PROBLEM
         # solve production problem
         ## update multiplier
         prodswap!(pb, λ)
@@ -128,7 +136,7 @@ function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
         # simulate to estimate outputed flows
         simulate!(pb, solver)
 
-        ###
+        ### TRANSPORT PROBLEM
         transswap!(pb, λ)
         # solve transport problem with augmented Lagrangian
         admmsolve!(pb.net, solver.F, solver.τ)
@@ -152,7 +160,7 @@ function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
         stopcrit(ϵp, ϵd, solver.rtol, solver.gtol) && break
 
         tf = toq()
-        verbose && @printf("\t %s \t %.4e \t %.4e \t %.4e \t %.4e \n", it, solver.cost, ϵp, ϵd, tf)
+        verbose && @printf("\t %s \t %.4e \t %.4e \t %.4e \t %.1fs \n", it, solver.cost, ϵp, ϵd, tf)
 
         push!(ngrads, norm(equilibrium))
         push!(exec, tf)
@@ -161,7 +169,7 @@ function solve!(pb::Grid, solver::ADMM, xini::Vector{Float64}; verbose=false)
         copy!(zp, z)
     end
 
-    ADMMResults(λ, -Inf, it, ngrads, it, exec)
+    ADMMResults(λ, solver.cost, it, ngrads, it, exec)
 end
 
 stopcrit(epsp, epsd, rtol, gtol) = (epsp < rtol) && (epsd < gtol)
