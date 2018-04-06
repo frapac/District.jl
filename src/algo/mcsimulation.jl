@@ -86,7 +86,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
             # Collect current state and noise:
             xt = stockTrajectories[t, k, :]
             ξt = scenarios[t, k, :]
-
+            
             sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
                                               solverProblems[t], t, xt, ξt)
 
@@ -101,7 +101,6 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
                     costs[k] += sol.θ
                 end       
             else
-                
                 costs[k] = Inf
                 break
             end

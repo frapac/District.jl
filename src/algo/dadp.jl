@@ -67,6 +67,14 @@ function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
     DADP(ntime, Inf, F, Q, algo, scen, nsimu, nit, mod)
 end
 
+function getinitialmultiplier(p::Vector{Float64}, sizelambda::Int64)
+    mul0 = p
+    for i in 1:sizelambda-1
+        mul0 = vcat(mul0, p)
+    end
+    return mul0
+end
+
 # We need three ingredients to build oracle:
 #     i)   solve! : once new multipliers are set, resolve nodes and edges
 #                 problems and update value function.

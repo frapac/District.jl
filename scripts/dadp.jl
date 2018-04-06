@@ -7,38 +7,28 @@ using Lbfgsb, Optim, Ipopt
 
 srand(2713)
 
-ALGO = "PADP"
+ALGO = "DADP"
+
+include("graph.jl")
+include("problem.jl")
 
 # Construction of the model
 # Node-arc incidence matrix
-A = [1. -1.]'
-#= A = [-1 0; =#
-#=      1 -1; =#
-#=      0 1] =#
-#= A = [-1 0 1; =#
-#=      1 -1 0; =#
-#=      0 1 -1] =#
-
-
 # Time span
 ts = TimeSpan(180, 1)
 
-# we build two houses
-h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=1))
-h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=1))
-h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=2, nbins=1))
-xini = Dict(h1=> [.55, 2., 20., 20.],
-            h2=> [2., 20., 20.],
-            h3=> [2., 20., 20.])
+# Noise discretization
+nbins = 1
 
-# Define network
-net = Network(ts, A)
-net.k2 = 1e-2
-net.k1 = 1e-3
-# Define corresponding grid
-pb = Grid(ts, [h1, h2], net)
+# Build grid
+pb, xini = twelvehouse(nbins=nbins)
+
+nnodes = size(pb.nodes,1)
+
 # Build SP problems in each node
-build!(pb, xini, FlowInterface)
+build!(pb, xini, PriceInterface)
+
+
 # Select algorithm to solve global problem
 algo = DADP(pb, nsimu=1, nit=10)
 
@@ -46,21 +36,25 @@ algo = DADP(pb, nsimu=1, nit=10)
 # Launch Gradient Descent!
 #= x0 = zeros(Float64, size(A, 1)*95) =#
 p = EDFPrice(ts).price[1:end-1]
-x0 = [p;p]
+mul0 = p
+for i in 1:nnodes-1
+    mul0 = vcat(mul0, p)
+end
 
 
 if ALGO == "SDDP"
+    nassess = 1
     # TODO: currently we have to define sim before calling DADP to avoid side effect
-    sim = Simulator(pb, 1, generation="total", nbins=50)
+    sim = Simulator(pb, nassess, generation="reduction", nbins=1)
     params = District.get_sddp_solver()
-    params.max_iterations = 50
+    params.max_iterations = 5
     sddp = solve_SDDP(sim.model, params, 2, 1)
 
     pol = District.HereAndNowDP(sddp.bellmanfunctions)
     res = District.simulate(sim, pol)
 elseif ALGO == "DADP"
     f, grad! = District.oracle(pb, algo)
-    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+    gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=10)
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
     res = District.simulate(sim, pol)
 elseif ALGO == "IPOPT"

@@ -14,11 +14,13 @@ mutable struct Zone <: AbstractNodalGrid
     # Nodes
     nodes::Vector{AbstractNode}
     # Border nodes index
-    borderindex::Dict{AbstractNode, Int64}
+    borderindex::Vector{Int64}
     # Edges
     net::AbstractNetwork
     # Connection interface
     conn::AbstractInterface
+    # Bounds on import of the zone
+    bounds::Vector{Tuple{Int64,Int64}}
     # SP model
     model
 end
@@ -32,22 +34,18 @@ struct ZonalGrid <: AbstractGrid
     net::AbstractNetwork
 end
 
-function Zone(ts::AbstractTimeSpan, 
-    nodes::Vector{AbstractNode}, 
-    borderindex::Dict{AbstractNode, Int64}, 
+function Zone(ts::AbstractTimeSpan,
+    nodes::Vector{AbstractNode},
+    borderindex::Vector{Int64},
     net::AbstractNetwork)
-    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),nothing)
+    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),Tuple{Int64,Int64}[],nothing)
 end
 
 nnodes(pb::ZonalGrid) = sum(length.([zone.borderindex for zone in pb.nodes]))
 nbordernodes(pb::Zone) = length(pb.borderindex)
 connectionsize(pb::Zone) = (ntimes(pb) - 1) * nbordernodes(pb)
 ninjection(pb::Zone) = nbordernodes(pb)
-
-
-function swap!(zone::Zone, exch::Vector{Float64})
-    swap!(zone.conn, exch)
-end
+swap!(zone::Zone, exch::Vector{Float64}) = swap!(zone.conn, exch)
 
 function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
                 maxflow=6., tau=1., generation="reduction",nbins=10)
@@ -69,105 +67,117 @@ function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
 
 end
 
-
-function reducepb(pb::Grid, membership::Vector{Int})
-    
-
-    
-    # Instantiate zones 
-    zones = Zone[]
-
-    fillzones!(pb, zones, membership)
+"Turns a nodal grid to a zonal grid given a clustering of the nodes"
+function reducegrid(pb::Grid, membership::Vector{Int})
+    zones = getzones(pb, membership)
 
     incidence = reducenetwork(pb, zones, membership)
 
+    updatebounds!(pb,zones,incidence)
 
     return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)) 
 end
-
-function fillzones!(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
     
+"Returns the vector containing the zones"
+function getzones(pb::Grid, membership::Vector{Int})
+    # Zones vector
+    zones = Zone[]
     # Adjacency matrix
     adjacencymatrix = getadjacence(pb.net.A)
-    # Total number of nodes
-    nnodes = size(pb.nodes,1)
     # Total number of zones
     nzones = maximum(membership)
-    # Map between nodes and their index
-    index = Dict(pb.nodes[i]=> i for i in 1:nnodes)
 
-    # Fill the vectors zonenode, and borderindex
+    # Fill the zones vector
     for z in 1:nzones
-        # Vector that associates a zone to its nodes
-        zonenode = AbstractNode[]
-        # Vector that associates a zone to a mapping between border nodes and their index in the node list 
-        borderindex = Dict{AbstractNode,Int64}()
-        # Index of a border node in the node list
-        bindex = 0
-
-        # fill nodes in zone z
-        for i in 1:nnodes
-            # If node i belongs to zone z
-            if membership[i] == z
-                push!(zonenode, pb.nodes[i])
-                bindex += 1    
-                # If node i has a neighbour out of its zone
-                for j in 1:nnodes
-                    if (membership[i] != membership[j]) && (adjacencymatrix[i,j] == 1)
-                        get!(borderindex, pb.nodes[i], bindex)
-                        break
-                    end
-                end
-            end
-        end
-    
-
-        nzonenodes = size(zonenode,1)
-        adjmat = adjacencymatrix[ [index[zonenode[i]] for i in 1:nzonenodes] , [index[zonenode[i]] for i in 1:nzonenodes] ]
-        
-        A, bounds = buildincidence(adjmat)
+        # Index of the zone nodes
+        belongtozone = membership .== z
+        # Extract zone nodes
+        zonenode = pb.nodes[belongtozone]
+        # Index of border nodes in zone
+        borderindex = getborderindex(belongtozone, adjacencymatrix[belongtozone,:])
+        # Adjacency matrix of the zone
+        zoneadjmat = adjacencymatrix[ belongtozone, belongtozone ]
+        # Build incidence matrix of the zone
+        A, tmp = buildincidence(zoneadjmat)
 
         push!(zones, Zone(pb.ts, zonenode, borderindex, Network(pb.ts, A)))
     end
+
+    return zones
 end
 
-function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
-    
-    # Adjacency matrix
-    adjacencymatrix = getadjacence(pb.net.A)
-    # Total number of nodes
-    nnodes = size(pb.nodes,1)
-    # Map between nodes and their index
-    index = Dict(pb.nodes[i]=> i for i in 1:nnodes)
+"Returns the vector of indices of the border nodes in a zone"
+function getborderindex(belongtozone::BitArray{1}, adjacencymatrix::Array{Float64})
+    # number of nodes in zone
+    nnodes = sum(belongtozone)
+    # Index of border nodes in zone
+    borderindex = Int64[]
 
-    # Total number of border nodes
-    nbordernodes = sum(length.([zone.borderindex for zone in zones]))
-    # Vector of all border nodes
-    allbordernodes = AbstractNode[]
-    for zone in zones
-        for i in collect(values(zone.borderindex))
-            push!(allbordernodes, zone.nodes[i])
-        end
-    end
-
-    connexion = adjacencymatrix[ [index[allbordernodes[i]] for i in 1:nbordernodes] , [index[allbordernodes[i]] for i in 1:nbordernodes] ]
-    nborderarcs = floor(Int, sum(connexion .> 0.)/2)
-    
-    # Reduced incidence matrix 
-    incidence = zeros(Float64, nbordernodes, nborderarcs)
-    iarc = 1
-
-    for i in 1:nbordernodes-1
-        for j in i+1:nbordernodes
-            if (membership[index[allbordernodes[i]]] != membership[index[allbordernodes[j]]]) &&  (adjacencymatrix[ index[allbordernodes[i]], index[allbordernodes[j]] ] == 1)
-                incidence[i, iarc] = 1
-                incidence[j, iarc] = -1
-                iarc += 1
+    for i in 1:nnodes
+        # neighbors of i
+        neigh = find(x->(x!=0), adjacencymatrix[i, :])
+        # checking if a neighbour is out of the zone
+        for j in neigh
+            if !belongtozone[j]
+                push!(borderindex,i)
+                break
             end
         end
     end
 
-    return incidence
+    return borderindex
+end
+
+function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
+    # Adjacency matrix
+    adjacencymatrix = getadjacence(pb.net.A)
+    # Index of border nodes
+    indexbordernodes = Int64[]
+    lastzoneindex=0
+    
+    for zone in zones
+        indexbordernodes = vcat(indexbordernodes, lastzoneindex + zone.borderindex)
+        lastzoneindex += length(zone.nodes)
+    end
+    connexion = adjacencymatrix[ indexbordernodes , indexbordernodes ]
+
+    return buildborderincidence(indexbordernodes, connexion, membership)
+end
+
+function buildborderincidence(indexbordernodes::Array{Int64}, connexion::Array{Float64}, membership::Vector{Int})
+    nbordernodes = length(indexbordernodes)
+    # Reduced incidence matrix 
+    incidence = Float64[]
+
+    # /!\ : We cannot use the function buildincidence because we don't want edges between the border nodes of a same zone to appear 
+    for i in 1:nbordernodes-1
+        for j in i+1:nbordernodes
+            if (membership[ indexbordernodes[i] ] != membership[ indexbordernodes[j] ]) &&  (connexion[i, j] == 1)
+                vec = zeros(Float64,1,nbordernodes)
+                vec[i] = 1
+                vec[j] = -1
+                incidence = vcat(incidence,vec)
+            end
+        end
+    end
+    return incidence'
+end
+
+function updatebounds!(pb::Grid, zones::Vector{Zone},incidence::Array{Float64})
+    lastzoneindex=0
+    for zone in zones
+        bounds = Tuple{Int64,Int64}[]
+
+        for i in 1:nbordernodes(zone)
+            #number of neighbours out of its zone
+            m = sum(abs.(incidence[lastzoneindex + i,:]))
+            maxf = m*pb.net.maxflow[1]
+            push!(bounds, (-maxf,maxf))
+        end
+
+        zone.bounds = bounds
+        lastzoneindex+=nbordernodes(zone)
+    end
 end
 
 function objective(pb::Zone)
@@ -182,12 +192,11 @@ function objective(pb::Zone)
             # add < λ, F_out >
             u = m[:u]
 
-            vcat(vals, u[end-ninj+1:end])
-            vcat(coefs, [ pb.conn.values[t+nb*(ntimes(pb)-1)] for nb in 0:ninj-1 ])
+            uinj = u[end-ninj+1:end]
+            vals = vcat(vals, uinj)
+            coefs = vcat(coefs, [ pb.conn.values[t+nb*(ntimes(pb)-1)] for nb in 0:ninj-1 ])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
-            for i in 1:ninj
-                expr += JuMP.QuadExpr([u[end-i+1]], [u[end-i+1]], [1e-2], 0.)
-            end
+            expr += JuMP.QuadExpr(uinj, uinj, 1e-2*ones(ninj), 0.)
         end
         return expr
     end

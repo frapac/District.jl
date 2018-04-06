@@ -118,8 +118,7 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
 
     # TO DO : choose proper bounds
     for i in 1:ninjection(pb)
-        m = pb.net.maxflow[1]
-        ub = vcat(ub, [(-m, m)])
+        ub = vcat(ub, [pb.bounds[i]])
     end
 
     # In order ...

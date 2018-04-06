@@ -31,26 +31,22 @@ params.max_iterations = 5
 sddp = solve_SDDP(sim.model, params, 2, 1)
 
 pol = District.HereAndNowDP(sddp.bellmanfunctions)
-res = District.simulate(sim, pol)
+resSDDP = District.simulate(sim, pol)
 ##################### SDDP #####
 
 
-# Time-scenario mean flow on edges
-q = getflow(res.controls)
+# Choice of weights for edges
+q = getflow(resSDDP.controls)
 
-# Laplacian of incidence matrix
-laplacian =  getlaplacian(pb.net.A , q)
-
-# Apply spectral clustering algorithm
+# Get node assignments to clusters by spectral clustering
 ## Cluster number hardcoded
 ncluster = 3 
-clusterresult = spectralclustering(laplacian, ncluster)
+membership = spectralclustering(pb.net.A, q, ncluster)
 
-# Get node assignments to clusters
-membership = clusterresult.assignments 
+# membership = vec([1 1 1 2 2 2 3 3 3 3 3 3])
 
 # Build zonal grid
-pbreduced = District.reducepb(pb, membership)
+pbreduced = District.reducegrid(pb, membership)
 
 # Build SP problems in each zone
 District.build!(pbreduced, xini, ZoneInterface, generation="reduction", nbins=1)
@@ -59,20 +55,16 @@ District.build!(pbreduced, xini, ZoneInterface, generation="reduction", nbins=1)
 ##################### DADP #####
 algo = DADP(pbreduced, nsimu=1, nit=5)
 
-
+# Initialization multiplier
 p = EDFPrice(ts).price[1:end-1]
+sizelambda = sum(District.nbordernodes.([zone for zone in pbreduced.nodes]))
+mul0 = District.getinitialmultiplier(p, sizelambda)
 
-# Initialization multiplicator
-mul0 = p
-nbordernodes = sum(District.nbordernodes.([zone for zone in pbreduced.nodes]))
-for i in 1:nbordernodes-1
-    mul0 = vcat(mul0, p)
-end
-
-# Compute f:mul and grad!:(mul, storage)
+# Compute optimal multipliers
 f, grad! = District.oracle(pbreduced, algo)
 gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=10)
 
+# Once optimal multipliers obtained, define optimal policy
 pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pbreduced.nodes])
-#res = District.simulate(sim, pol, )
+resDADP = District.simulate(sim, pol)
 ##################### DADP #####

@@ -27,9 +27,8 @@ struct FlowInterface <: AbstractInterface
     values::Array{Float64}
     linker::AbstractConnection
 end
-
+    
 swap!(p::FlowInterface, v::Array{Float64}) = copy!(p.values, v)
-
 
 # Interface for augmented Lagrangian
 struct QuadInterface <: AbstractInterface
@@ -44,8 +43,9 @@ flow!(p::QuadInterface, f::Array{Float64}) = copy!(p.penal, f)
 
 # Interface for zone
 struct ZoneInterface <: AbstractInterface
-	values::Array{Float64}
-	linker::Array{Int64}
+    values::Array{Float64}
+    # Matrix indicating position of border nodes
+    linker::Array{Int64}
 end
 
 swap!(p::ZoneInterface, v::Array{Float64}) = copy!(p.values, v)

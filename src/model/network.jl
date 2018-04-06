@@ -74,6 +74,7 @@ function buildincidence(connexion::Array{Float64})
             push!(bounds, connexion[ix, iy])
         end
     end
+
     return A, bounds
 end
 

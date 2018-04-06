@@ -165,24 +165,32 @@ function getcorrespondance(h::AbstractNode)
     return xname, uname, wname
 end
 
-function getcorrespondance(pb::AbstractNodalGrid)
+function getcorrespondance(pb::AbstractNodalGrid; lastzoneindex=0)
     xname = String[]
     uname = String[]
     wname = String[]
 
     for (iin, n) in enumerate(pb.nodes)
         xn, un, wn = getcorrespondance(n)
-        push!(xname, ("Node $iin: " .* xn)...)
-        push!(uname, ("Node $iin: " .* un)...)
-        push!(wname, ("Node $iin: " .* wn)...)
+        push!(xname, ("Node $(lastzoneindex+iin): " .* xn)...)
+        push!(uname, ("Node $(lastzoneindex+iin): " .* un)...)
+        push!(wname, ("Node $(lastzoneindex+iin): " .* wn)...)
     end
 
     for edge in 1:narcs(pb)
         pos = find(x->(x!=0), pb.net.A[:, edge])
         # one edge joins only two nodes
         @assert length(pos) == 2
-        push!(uname, ("Connection $(pos[1]) <--> $(pos[2])"))
+        push!(uname, ("Connection $(lastzoneindex+pos[1]) <--> $(lastzoneindex+pos[2])"))
     end
+
+    ninj = ninjection(pb)
+    if ninj > 0
+        for inj in 1:ninj
+            push!(uname, ("Ext. Import $inj" ))
+        end
+    end
+
 
     return xname, uname, wname
 end
@@ -192,11 +200,13 @@ function getcorrespondance(pb::ZonalGrid)
     uname = String[]
     wname = String[]
 
+    lastzoneindex = 0
     for (iin, n) in enumerate(pb.nodes)
-        xn, un, wn = getcorrespondance(n)
-        vcat(xname, xn)
-        vcat(uname, un)
-        vcat(wname, wn)
+        xn, un, wn = getcorrespondance(n, lastzoneindex=lastzoneindex)
+        xname = vcat(xname, xn)
+        uname = vcat(uname, un)
+        wname = vcat(wname, wn)
+        lastzoneindex+=length(pb.nodes)
     end
 
     return xname, uname, wname
@@ -205,6 +215,17 @@ end
 
 function getlabel(sim::Simulator, k::Symbol)
     names = sim.names[k]
+    println("="^30)
+    for (iix, n) in enumerate(names)
+        println("$k[$iix]: $n")
+    end
+    println("="^30)
+end
+
+function getlabel(pb::AbstractGrid, k::Symbol)
+    xname, uname, wname = getcorrespondance(pb)
+    namesdict = Dict(:x=>xname, :u=>uname, :w=>wname)
+    names = namesdict[k]
     println("="^30)
     for (iix, n) in enumerate(names)
         println("$k[$iix]: $n")
