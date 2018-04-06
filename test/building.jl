@@ -89,4 +89,13 @@ using District
             @test house.conn.values == price2
         end
     end
+
+    @testset "Final cost" begin
+        ts = TimeSpan(0, 1)
+        # load house
+        house = load(ts, ElecHouse())
+        District.penalize!(house, ElecHotWaterTank, :(1. * max(0, 2 -x)))
+        District.build!(house, [.25, 20., 20.])
+
+    end
 end

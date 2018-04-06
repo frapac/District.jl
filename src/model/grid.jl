@@ -178,9 +178,11 @@ function builddynamic(pb::AbstractNodalGrid)
 
     for dev in pb.nodes
         # update irradiation in params
-        pint, pext = get_irradiation(dev)
-        params["pint"] = pint
-        params["pext"] = pext
+        if hasdevice(dev, R6C2)
+            pint, pext = get_irradiation(dev)
+            params["pint"] = pint
+            params["pext"] = pext
+        end
 
         # parse dynamics of nodes
         ex = parsebuilding(dev, xindex, uindex, dev.time.δt, params)
@@ -272,6 +274,7 @@ end
 
 # Build real cost
 function getrealcost(pb::AbstractNodalGrid)
+    warn("Building real cost for `Grid` is currently broken")
     function realcost(t, x, u, w)
         cost = 0.
         for d in pb.nodes
@@ -307,6 +310,18 @@ function buildfcost(pb::AbstractNodalGrid)
     return final_cost
 end
 
+# return elec load of grid as expression
+function getelecload(pb::Grid)
+    ex = Expr(:call, :+)
+    uindex, windex = (1, 1)
+    for (id, d) in enumerate(pb.nodes)
+        push!(ex.args, getload(d, uindex, windex))
+        uindex += ncontrols(d)
+        windex += nnoises(d)
+    end
+    return ex
+end
+
 function getrealfinalcost(pb::AbstractNodalGrid)
     function fcost(x)
         cost = 0.
@@ -315,7 +330,7 @@ function getrealfinalcost(pb::AbstractNodalGrid)
             # get tank position
             postank = getposition(d, ElecHotWaterTank)
             # TODO: hardcoded!!!!
-            cost += PENAL_TANK * (2. - x[postank+xindex])
+            cost += PENAL_TANK * max(2. - x[postank+xindex], 0.)
             xindex += nstocks(d)
         end
         return cost

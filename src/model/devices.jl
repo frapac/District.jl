@@ -14,8 +14,35 @@ export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTan
        ThermalHeater
 export GraphConnection
 
+##################################################
+# TYPE
+#####################################################
+"""
+    AbstractDevice
+
+Abstract type for objects that implement a device.
+"""
 abstract type AbstractDevice <: AbstractModel end
 
+"""
+    AbstractHeater <: AbstractDevice
+
+Abstract Heater for objects implementing a heater.
+"""
+abstract type AbstractHeater <: AbstractDevice end
+
+"""
+    AbstractConnection <: AbstractDevice
+
+Connection implements the bridge between a node or a zone,
+and the remaining of the graph.
+"""
+abstract type AbstractConnection <: AbstractDevice end
+
+
+##################################################
+# METHODS
+##################################################
 """
     elecload(d::AbstractDevice, uindex::Int)
 
@@ -92,6 +119,25 @@ getname(d::AbstractDevice) = "Undefined"
 
 ################################################################################
 # Battery
+"""
+    struct Battery <: AbstractDevice
+        name::String
+        # battery lower bound
+        binf::Float64
+        # battery upper bound
+        bup::Float64
+        # max charge rate
+        δb::Float64
+        # charge yield
+        ρi::Float64
+        # discharge yield
+        ρe::Float64
+        # auto-discharge rate
+        αc::Float64
+    end
+
+Battery device.
+"""
 struct Battery <: AbstractDevice
     name::String
     # battery lower bound
@@ -132,6 +178,27 @@ getname(bat::Battery) = "Battery"
 ################################################################################
 # Electrical hot water tank
 # EHWT has only a output and no input by construction.
+"""
+    struct ElecHotWaterTank <: AbstractDevice
+        name::Symbol
+        # auto-discharge rate
+        αt::Float64
+        # charge yield
+        ηi::Float64
+        # discharge yield
+        ηe::Float64
+        # tank max energy
+        hmax::Float64
+        # tank max power
+        power::Float64
+        # allowable temperature variation
+        ΔT::Float64
+        # output flow
+        output::Expr
+    end
+
+Electrical hot water tank device.
+"""
 struct ElecHotWaterTank <: AbstractDevice
     name::Symbol
     # auto-discharge rate
@@ -184,6 +251,27 @@ getname(hwt::ElecHotWaterTank) = "EHWT"
 ################################################################################
 # Thermal hot water tank
 # THWT has only a output and no input by construction.
+"""
+    struct ThermalHotWaterTank <: AbstractDevice
+        name::Symbol
+        # auto-discharge rate
+        αt::Float64
+        # charge yield
+        ηi::Float64
+        # discharge yield
+        ηe::Float64
+        # tank max energy
+        hmax::Float64
+        # allowable temperature variation
+        ΔT::Float64
+        # input flow
+        input::Expr
+        # output flow
+        output::Expr
+    end
+
+Thermal hot water tank device.
+"""
 struct ThermalHotWaterTank <: AbstractDevice
     name::Symbol
     # auto-discharge rate
@@ -231,6 +319,7 @@ ncontrols(hwt::ThermalHotWaterTank) = 0
 xbounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[(0., hwt.hmax)]
 ubounds(hwt::ThermalHotWaterTank) = Tuple{Float64, Float64}[]
 getname(hwt::ThermalHotWaterTank) = "THWT"
+
 
 ################################################################################
 # R6C2 model
@@ -356,6 +445,23 @@ getname(thm::R6C2) = "Thermal Enveloppe"
 
 ################################################################################
 # CHP and burners models
+"""
+    struct MicroCHP <: AbstractDevice
+        name::String
+        # max gas power
+        power::Float64
+        # thermal yield
+        yield::Float64
+        # proportion of elec
+        eta_elec::Float64
+        # max power elec
+        power_elec::Float64
+        # max thermal power
+        power_therm::Float64
+    end
+
+Micro Combined Heat and Power Generator device.
+"""
 struct MicroCHP <: AbstractDevice
     name::String
     # max gas power
@@ -394,8 +500,14 @@ getname(chp::MicroCHP) = "μCHP"
 
 ################################################################################
 # Heaters
-abstract type AbstractHeater <: AbstractDevice end
 
+"""
+    struct ElecHeater <: AbstractHeater
+        maxheating::Float64
+    end
+
+Electrical heater device.
+"""
 struct ElecHeater <: AbstractHeater
     maxheating::Float64
 end
@@ -411,6 +523,13 @@ getname(h::ElecHeater) = "Elec Heater"
 
 
 # TODO: add dynamics of ThermalHeater
+"""
+    struct ThermalHeater <: AbstractHeater
+        maxheating::Float64
+    end
+
+Thermal heater device.
+"""
 struct ThermalHeater <: AbstractHeater
     maxheating::Float64
 end
@@ -425,7 +544,16 @@ getname(h::ThermalHeater) = "Thermal Heater"
 
 ################################################################################
 # Connection
-abstract type AbstractConnection <: AbstractDevice end
+"""
+    struct GraphConnection <: AbstractConnection
+        # minimum import from local network
+        minkva::Float64
+        # maximum import from local network
+        maxkva::Float64
+    end
+
+Connection between node and remaining network.
+"""
 struct GraphConnection <: AbstractConnection
     minkva::Float64
     maxkva::Float64
@@ -435,21 +563,9 @@ end
 GraphConnection(kva::Float64) = GraphConnection(-kva, kva)
 
 parsedevice(conn::AbstractConnection, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
-
-elecload(conn::AbstractConnection, uindex::Int) = :(-u[$uindex])
-nstates(conn::AbstractConnection) = 0
-ncontrols(conn::AbstractConnection) = 1
-xbounds(conn::AbstractConnection) = Tuple{Float64, Float64}[]
-ubounds(conn::AbstractConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
-getname(conn::AbstractConnection) = "Import"
-
-
-################################################################################
-# Link between two devices
-abstract type AbstractLink end
-struct Link <: AbstractLink
-    din::AbstractModel
-    dout::AbstractModel
-end
-
-link!(n::AbstractNode, l::Link, uindex::Int, windex::Int) = link!(n, l.din, l.dout, uindex, windex)
+elecload(conn::GraphConnection, uindex::Int) = :(-u[$uindex])
+nstates(conn::GraphConnection) = 0
+ncontrols(conn::GraphConnection) = 1
+xbounds(conn::GraphConnection) = Tuple{Float64, Float64}[]
+ubounds(conn::GraphConnection) = Tuple{Float64, Float64}[(conn.minkva, conn.maxkva)]
+getname(conn::GraphConnection) = "Import"

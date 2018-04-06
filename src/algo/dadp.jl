@@ -12,10 +12,59 @@ export DADP
 
 import Base: Base.show
 
+"""
+    AbstractDecompositionSolver
+
+Abstract type to define stochastic decomposition algorithms.
+"""
 abstract type AbstractDecompositionSolver <: AbstractSolver end
 
+"""
+    lowerbound(pb::Grid, algo::AbstractDecompositionSolver)
+
+Return Bellman lower bound obtained by decomposition solver.
+"""
+function lowerbound(pb::Grid, algo::AbstractDecompositionSolver)
+    lb = 0.
+    for d in pb.nodes
+        subpb = algo.models[d.name]
+        lb += StochDynamicProgramming.lowerbound(subpb)
+    end
+    return lb + pb.net.cost
+end
 
 # TODO: move params in dedicated structure
+"""
+    mutable struct DADP <: AbstractDecompositionSolver
+        # number of timesteps
+        ntime::Int
+        # current dual cost
+        cost::Float64
+        # current flow in nodes
+        F::Array{Float64, 2}
+        # current flow in edges
+        Q::Array{Float64}
+        # solver to solve nodes subproblems
+        algo::AbstractDPSolver
+        # Scenario
+        scen::Array
+        # number of Monte Carlo simulations to estimate gradient
+        nsimu::Int
+        # maximum number of iterations
+        nit::Int
+        # models stores SDDPInterface in dedicated Dictionnary
+        models::Dict
+    end
+
+DADP solver.
+
+
+# Construction
+
+    DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
+
+Build DADP solver.
+"""
 mutable struct DADP <: AbstractDecompositionSolver
     # number of timesteps
     ntime::Int

@@ -94,11 +94,6 @@ function solve!(pb::Grid, algo::MADP, V0::Vector{Float64}, μ0::Vector{Float64})
         V[:] = -flowallocation(pb)
         println(mean(pb.nodes[1].conn.values))
         μ[:] = (algo.λ')[:]
-        #= μ[μ .> 0] = 0 =#
-
-        #= if length(μ[μ .> 0.]) > 0 =#
-        #=     break =#
-        #= end =#
 
         @printf("\t %i \t %.6e\n", nit, algo.cost)
     end

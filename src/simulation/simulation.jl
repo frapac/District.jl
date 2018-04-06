@@ -11,6 +11,18 @@ export Simulator, SimulationResult
 
 ################################################################################
 # Simulation results
+"""
+    struct SimulationResult
+        # costs along assessment scenarios. size = (nscen,)
+        costs::Vector{Float64}
+        # stocks along assessment scenarios. size = (ntime, nscen, nx)
+        stocks::Array{Float64, 3}
+        # controls along assessment scenarios. size = (ntime, nscen, nu)
+        controls::Array{Float64, 3}
+    end
+
+Object to store results of a simulation.
+"""
 struct SimulationResult
     costs::Vector{Float64}
     stocks::Array{Float64, 3}
@@ -25,6 +37,37 @@ end
 
 ################################################################################
 # Simulator
+"""
+    struct Simulator
+        # names of states, controls and uncertainties
+        names::Dict
+        # time period considered
+        ts::TimeSpan
+        # SP Model to simulate
+        model::StochDynamicProgramming.SPModel
+        # assessment scenarios
+        scenarios::Array{Float64, 3}
+        # simulation's dynamics
+        realdynamic::Function
+        # simulations's costs
+        realcost::Function
+        # simulation's final cost
+        realfinalcost::Function
+    end
+
+Simulator object.
+
+
+# Construction
+
+    Simulator(n::AbstractNode, nassess::Int)
+
+Build Simulator corresponding to Node `n` and to `nassess` scenarios.
+
+    Simulator(pb::AbstractGrid, nassess::Int)
+
+Build Simulator corresponding to Grid `pb` and to `nassess` scenarios.
+"""
 struct Simulator
     # names of states, controls and uncertainties
     names::Dict
@@ -44,11 +87,6 @@ end
 
 
 # TODO: currently dynamics is the same as in optimization model
-"""
-    Simulator(n::AbstractNode, nassess::Int)
-
-Build Simulator corresponding to Node `n` and to `nassess` scenarios.
-"""
 function Simulator(n::AbstractNode, nassess::Int, outsample=true)
     xname, uname, wname = getcorrespondance(n)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
@@ -59,15 +97,22 @@ end
 
 
 # adapt Simulator for grid
-function Simulator(pb::Grid, nassess::Int;
-                   generation="reduction", nbins=10, noptscen=100, outsample=true)
+function Simulator(pb::AbstractGrid, nassess::Int;
+                   generation="reduction", nbins=10, noptscen=100,
+                   outsample=true, seed=-1)
+    # Get names label
     xname, uname, wname = getcorrespondance(pb)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
+    # Generate time span
     ts = pb.ts
+
+    # Model generation
+    # if specified, set random seed
+    (seed > 0) && srand(seed)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
     # generate scenarios
-    scen = outsample ? genassessments(pb, nassess) : genscen(spmodel, nassess)
+    scen = outsample ? genassessments(pb, nassess) : genscen(pb, nassess)
     return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end
@@ -87,8 +132,8 @@ end
 """
     simulate(sim::Simulator, policy::AbstractPolicy)
 
-Simulate strategies specified by `policy` on `sim` Simulator.
-Return a SimulationResult object.
+Simulate strategies specified by `policy` with `sim` Simulator.
+Return a `SimulationResult` object.
 """
 function simulate(simulator::Simulator, policy::AbstractPolicy)
     scenario = simulator.scenarios
@@ -126,9 +171,9 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
 
             # update
             # TODO
-            #= costs[k] += simulator.realcost(t, x, u, ξ) =#
-            m = policy.problem
-            costs[k] += getobjectivevalue(m) - getvalue(m[:alpha])
+            costs[k] += simulator.realcost(t, x, u, ξ)
+            #= m = policy.problem =#
+            #= costs[k] += getobjectivevalue(m) - getvalue(m[:alpha]) =#
             stocks[t+1, k, :] = xf
             controls[t, k, :] = u
         end
@@ -213,6 +258,17 @@ function getcorrespondance(pb::ZonalGrid)
 end
 
 
+"""
+    getlabel(sim::Simulator, k::Symbol)
+
+Print labels of objects inside Simulator `sim`.
+
+Different choices of `k` are:
+* `:x`: print states labels ;
+* `:u`: print controls labels ;
+* `:w`: print noises labels .
+
+"""
 function getlabel(sim::Simulator, k::Symbol)
     names = sim.names[k]
     println("="^30)

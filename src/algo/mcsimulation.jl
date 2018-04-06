@@ -7,6 +7,19 @@
 
 ############################################################
 # Primal estimation
+"""
+    mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3})
+
+Compute average importation in node by Monte-Carlo, along scenarios
+`scenarios`.
+
+# Returns
+* `costs::Vector{Float64}` size=(nscen,)
+Costs along assessment scenarios.
+
+* `import::Array{Float64, 2}` size=(ntime, nscen)
+Importation along assessment scenarios.
+"""
 function mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3})
     return mcsimulation(sddp.spmodel, sddp.params, sddp.solverinterface, scenarios)
 end

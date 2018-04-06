@@ -34,7 +34,18 @@ function get_zenith(t::Float64, day::Int, latitude)
 end
 
 
-""" Get solar irradiation."""
+"""
+    get_irradiation(env::R6C2, ts::TimeSpan)
+
+Compute irradiation during time period `ts` for `R6C2` model `env` with Perez
+method.
+
+# Return
+* `G_extrad::Vector{Float64}`, size=(ntime,)
+    External radiation (on wall)
+* `G_intrad::Vector{Float64}`, size=(ntime,)
+    Internal radiation (on windows)
+"""
 function get_irradiation(env::R6C2, ts::TimeSpan)
     day = ts.day
     ntime = ntimesteps(ts)

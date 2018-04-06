@@ -1,3 +1,8 @@
+################################################################################
+# District.jl
+################################################################################
+# Generate academic problem and solve SP model by decomposition.
+################################################################################
 
 push!(LOAD_PATH, "..")
 
@@ -5,18 +10,18 @@ push!(LOAD_PATH, "..")
 using District
 using StochDynamicProgramming
 using Lbfgsb, Ipopt
-include("problem.jl")
+include("harsh.jl")
 include("solvers.jl")
 
 srand(2713)
 
 ALGO = "SDDP"
 
-pb, xini = twelvehouse(nbins=10)
+pb, xini = twohouse(nbins=10)
 
 if ALGO == "DADP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    _, algo = bfgs(pb, nsimu=100)
+    _, algo = bfgs(pb, nsimu=200)
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "IPOPT"
     build!(pb, xini, PriceInterface, maxflow=6.)
@@ -28,6 +33,6 @@ elseif ALGO == "PADP"
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    sim    = Simulator(pb, 1, generation="reduction", nbins=50)
+    sim  = Simulator(pb, 1000, generation="total", nbins=50, outsample=false)
     algo = runsddp(sim.model)
 end

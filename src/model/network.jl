@@ -8,10 +8,17 @@
 
 export Network, Grid, build!
 
+"""
+    AbstractNetwork
+
+A Network connects different nodes together.
+This object stores the graph's structure.
+"""
 abstract type AbstractNetwork end
 
 immutable NoneNetwork <: AbstractNetwork end
 
+# TODO: split graph structure from resolution results
 mutable struct Network <: AbstractNetwork
     # number of timesteps
     ntime::Int
@@ -78,8 +85,40 @@ function buildincidence(connexion::Array{Float64})
     return A, bounds
 end
 
+"Get laplacian matrix of node-arc incidence matrix `A` with weight q."
+function getlaplacian(A::Array{Float64, 2}, q::Array{Float64, 1})
+    return A * diagm(q) * A'
+end
+
+"Get adjacence matrix of node-arc incidence matrix `A`."
+function getadjacence(A::Array{Float64, 2})
+    nnodes = size(A, 1)
+    L = A * A'
+    for i in 1:nnodes
+        L[i, i] = 0
+    end
+    return -L
+end
+
+"Get average flow stored in `u`."
+function getflow(pb, u, operation=mean)
+    nu = sum(District.ncontrols.(pb.nodes))
+    q = abs.(u[:, :, nu+1:end])
+    return vec(operation(operation(q, 2), 1))
+end
+
 getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]
 
+"""
+    flowallocation(net::Network)
+
+Compute the injection flows at nodes, as
+
+`` A * q ``
+
+with `A` node-arc incidence matrix of network and `q` current flows
+through edges (stored in `net.Q`).
+"""
 function flowallocation(net::Network)
     dg = zeros(Float64, net.ntime-1, nnodes(net))
     for t in 1:(net.ntime - 1)

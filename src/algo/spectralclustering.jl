@@ -10,9 +10,8 @@ using Clustering
 
 #Input : a laplacian and a number of clusters
 #Output : returns an assignment vector that associates each point to a cluster 
-function spectralclustering(A::Array{Float64, 2}, q::Array{Float64, 1}, nbclusters::Int64)
-	# Laplacian of incidence matrix
-	laplacian =  getlaplacian(A , q)
+function spectralclustering(laplacian::Array{Float64}, nbclusters::Int64)
+	
 
     eigvectors = eigvecs(laplacian)
     U = eigvectors[:,1:nbclusters]  #nbclusters first eigen vectors

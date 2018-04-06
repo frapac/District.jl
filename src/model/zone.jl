@@ -4,7 +4,6 @@
 # Generic models for  zone.
 ################################################################################
 
-include("../../scripts/graph.jl")
 
 mutable struct Zone <: AbstractNodalGrid
     # name of Zone
@@ -72,7 +71,7 @@ function reducegrid(pb::Grid, membership::Vector{Int})
     zones = getzones(pb, membership)
 
     incidence = reducenetwork(pb, zones, membership)
-
+    println(size(incidence))
     updatebounds!(pb,zones,incidence)
 
     return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)) 
@@ -140,8 +139,11 @@ function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
         lastzoneindex += length(zone.nodes)
     end
     connexion = adjacencymatrix[ indexbordernodes , indexbordernodes ]
+    println(indexbordernodes)
+    println(connexion)
+    incidence = buildborderincidence(indexbordernodes, connexion, membership)
 
-    return buildborderincidence(indexbordernodes, connexion, membership)
+    return incidence
 end
 
 function buildborderincidence(indexbordernodes::Array{Int64}, connexion::Array{Float64}, membership::Vector{Int})
@@ -160,7 +162,7 @@ function buildborderincidence(indexbordernodes::Array{Int64}, connexion::Array{F
             end
         end
     end
-    return incidence'
+    return Array(incidence')
 end
 
 function updatebounds!(pb::Grid, zones::Vector{Zone},incidence::Array{Float64})

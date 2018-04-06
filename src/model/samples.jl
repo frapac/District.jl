@@ -19,6 +19,11 @@ Load house model corresponding to profile `prof`.
 """
 function load end
 
+function hasheater end
+
+
+hasheater(p::AbstractProfile) = p.heater > 0
+
 
 ################################################################################
 # Elec house
@@ -38,13 +43,14 @@ struct ElecHouse <: AbstractProfile
 end
 ElecHouse(;pv=0, heat=3, bat="", env="rt2012", idhouse=1, nbins=10) = ElecHouse(pv, heat, bat, env, idhouse, nbins)
 
+
 function loadMultipleHouse(ts::TimeSpan, nnodes::Int64)
     houseArray = Array{AbstractNode,1}(nnodes)
     for i in 1:nnodes
         solarpv = bitrand(1)
         if solarpv[1]
             houseArray[i] = load(ts, ElecHouse(pv=rand(1:10), heat=rand(2:6), bat="bat0"^rand(0:1), nbins=1))
-        else 
+        else
             houseArray[i] = load(ts, ElecHouse(pv=0, heat=rand(2:6), bat="", nbins=1))
         end
     end
@@ -63,15 +69,18 @@ function load(ts::TimeSpan, prof::ElecHouse)
 
     hwt = ElecHotWaterTank("ehwt0")
     add!(house, hwt)
+    penalize!(house, ElecHotWaterTank, :(1. * max(0, 2 -x)))
 
-    thm = R6C2(prof.env)
-    add!(house, thm)
+    if hasheater(prof)
+        thm = R6C2(prof.env)
+        add!(house, thm)
 
-    heat = ElecHeater(prof.heater)
-    add!(house, heat)
+        heat = ElecHeater(prof.heater)
+        add!(house, heat)
 
-    # link heater to thermal envelope
-    join!(house, thm, heat)
+        # link heater to thermal envelope
+        join!(house, thm, heat)
+    end
 
     # import demands
     wdem = Demands(prof.nbinsdem, prof.idhouse)
@@ -88,7 +97,10 @@ function load(ts::TimeSpan, prof::ElecHouse)
 
     # build objective: we penalize elec and thermal comfort.
     set!(house, EDFPrice(ts))
-    set!(house, ComfortPrice(ts))
+
+    if hasheater(prof)
+        set!(house, ComfortPrice(ts))
+    end
 
     return house
 end

@@ -11,6 +11,7 @@ abstract type AbstractInterface end
 
 # If no decomposition scheme, we use NoneInterface
 struct NoneInterface <: AbstractInterface end
+NoneInterface(values, linker) = NoneInterface()
 
 
 # Interface for price decomposition

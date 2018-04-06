@@ -42,7 +42,34 @@ end
 ################################################################################
 # Define abstract type
 # abstract model templates elements inside Nodes
+"""
+    AbstractModel
+
+Root model for `Device` and `Uncertainties`.
+A `Model` is an object intended to be an element inside a `Node`.
+"""
 abstract type AbstractModel end
 
 # Definition of node in graph
+"""
+    AbstractNode
+
+Generic type for `Node`.
+`Node` is the basic element inside a network. `Nodes` are connected
+together via edges.
+
+# Exemple
+* `House` is a node implementing a domestic house model.
+"""
 abstract type AbstractNode end
+
+
+################################################################################
+# Link between two devices
+abstract type AbstractLink end
+struct Link <: AbstractLink
+    din::AbstractModel
+    dout::AbstractModel
+end
+
+link!(n::AbstractNode, l::Link, uindex::Int, windex::Int) = link!(n, l.din, l.dout, uindex, windex)

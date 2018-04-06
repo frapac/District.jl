@@ -3,10 +3,11 @@ push!(LOAD_PATH, "..")
 using District, StochDynamicProgramming
 using Lbfgsb, Optim
 
+include("../problem.jl");
+
+
 srand(2713)
 
-include("../graph.jl")
-include("../problem.jl")
 
 # Time span
 ts = TimeSpan(180, 1)
@@ -26,7 +27,7 @@ build!(pb, xini, PriceInterface)
 nassess = 1
 sim = Simulator(pb, nassess, generation="reduction", nbins=1)
 params = District.get_sddp_solver()
-params.max_iterations = 5
+params.max_iterations = 50
 # Computing value functions 
 sddp = solve_SDDP(sim.model, params, 2, 1)
 
@@ -34,16 +35,16 @@ pol = District.HereAndNowDP(sddp.bellmanfunctions)
 resSDDP = District.simulate(sim, pol)
 ##################### SDDP #####
 
-
 # Choice of weights for edges
-q = getflow(resSDDP.controls)
-
+q = District.getflow(pb,resSDDP.controls)
+# Laplacian of incidence matrix
+laplacian =  District.getlaplacian(pb.net.A, q)
 # Get node assignments to clusters by spectral clustering
 ## Cluster number hardcoded
 ncluster = 3 
-membership = spectralclustering(pb.net.A, q, ncluster)
+membership = spectralclustering(laplacian, ncluster)
 
-# membership = vec([1 1 1 2 2 2 3 3 3 3 3 3])
+#membership = vec([1 1 1 2 2 2 3 3 3 3 3 3])
 
 # Build zonal grid
 pbreduced = District.reducegrid(pb, membership)

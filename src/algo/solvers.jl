@@ -7,6 +7,12 @@
 # TODO: clean SDDP solver
 
 export solve
+
+"""
+    AbstractSolver
+
+Abstract type to define optimization solver objects.
+"""
 abstract type AbstractSolver end
 
 
@@ -20,17 +26,18 @@ function solve end
 
 # UTILS
 # Specify your solver:
-#= using Gurobi =#
+using Gurobi
 #= using Clp =#
-using CPLEX
+# using CPLEX
 
 "Get LP solver."
 #= get_solver() = Gurobi.GurobiSolver(OutputFlag=false, MIPGap=.01) =#
-get_solver() = CPLEX.CplexSolver(
-                                 CPX_PARAM_SIMDISPLAY=0,
-                                 CPX_PARAM_SCRIND=0,
-                                 CPX_PARAM_QPMETHOD=2
-                                )
+#get_solver() = CPLEX.CplexSolver(
+#                                 CPX_PARAM_SIMDISPLAY=0,
+#                                 CPX_PARAM_SCRIND=0,
+#                                 CPX_PARAM_QPMETHOD=2
+#                                )
+get_solver() = Gurobi.GurobiSolver(OutputFlag=false, Method=0)
 
 
 "Get StochDynamicProgramming SDDP solver."
