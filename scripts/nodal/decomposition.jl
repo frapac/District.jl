@@ -10,14 +10,14 @@ push!(LOAD_PATH, "..")
 using District
 using StochDynamicProgramming
 using Lbfgsb, Ipopt
-include("harsh.jl")
+include("problem.jl")
 include("solvers.jl")
 
 srand(2713)
 
 ALGO = "SDDP"
 
-pb, xini = twohouse(nbins=10)
+pb, xini = sixhouse(nbins=10)
 
 if ALGO == "DADP"
     build!(pb, xini, PriceInterface, maxflow=6.)
@@ -33,6 +33,6 @@ elseif ALGO == "PADP"
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    sim  = Simulator(pb, 1000, generation="total", nbins=50, outsample=false)
+    sim  = Simulator(pb, 1000, generation="reduction", nbins=50, outsample=false)
     algo = runsddp(sim.model)
 end

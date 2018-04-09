@@ -11,6 +11,7 @@ module District
 using JLD
 using JuMP
 using Scenarios, StochDynamicProgramming
+using Clustering
 using JSON, ProgressMeter, MacroTools
 
 

@@ -13,7 +13,7 @@ using Lbfgsb, Ipopt
 
 srand(2713)
 
-ALGO = "PADP"
+ALGO = "SDDP"
 
 # Construction of the model
 tau = 1e-1
@@ -31,9 +31,9 @@ A = [1. -1.]'
 ts = TimeSpan(180, 1)
 
 # we build two houses
-h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=10))
-h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=10))
-h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=2, nbins=1))
+h1 = load(ts, ElecHouse(pv=4, heat=0, bat="bat0", nbins=10))
+h2 = load(ts, ElecHouse(pv=0, heat=0, bat="", idhouse=2, nbins=10))
+h3 = load(ts, ElecHouse(pv=4, heat=0, bat="", idhouse=2, nbins=1))
 xini = Dict(h1=> [.55, 2.],
             h2=> [2.],
             h3=> [2.])
@@ -46,7 +46,7 @@ net.maxflow[:] = 6.
 # Define corresponding grid
 pb = Grid(ts, [h1, h2], net)
 # Build SP problems in each node
-build!(pb, xini, FlowInterface, maxflow=6., tau=tau)
+build!(pb, xini, PriceInterface, maxflow=6., tau=tau)
 
 # Launch Gradient Descent!
 #= x0 = zeros(Float64, size(A, 1)*95) =#

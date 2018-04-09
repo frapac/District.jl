@@ -28,7 +28,7 @@ struct FlowInterface <: AbstractInterface
     values::Array{Float64}
     linker::AbstractConnection
 end
-    
+
 swap!(p::FlowInterface, v::Array{Float64}) = copy!(p.values, v)
 
 # Interface for augmented Lagrangian
@@ -50,4 +50,3 @@ struct ZoneInterface <: AbstractInterface
 end
 
 swap!(p::ZoneInterface, v::Array{Float64}) = copy!(p.values, v)
-

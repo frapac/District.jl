@@ -27,7 +27,7 @@ Grid(ts::AbstractTimeSpan) = Grid(ts, AbstractNode[], NoneNetwork())
 nnodes(pb::AbstractNodalGrid) = length(pb.nodes)
 narcs(pb::AbstractGrid) = pb.net.narcs
 ntimes(pb::AbstractGrid) = ntimesteps(pb.ts)
-ninjection(pb::Grid) = 0 
+ninjection(pb::Grid) = 0
 
 
 # Build models inside `grid` for decomposition
@@ -216,8 +216,8 @@ function buildcost(pb::AbstractNodalGrid)
         @constraint(m, qp .>= -u[end-ninj-na+1:end-ninj])
         # add transportation cost to cost
         cost += pb.net.k1*sum(qp) + pb.net.k2 * dot(qp, qp)
-        
-        # Zone connection cost        
+
+        # Zone connection cost
         if ninj > 0
             cost += objective(pb)(m, t, x, u, w)
         end
@@ -230,7 +230,7 @@ end
 # remember: flow is last control in each node (u[end]) so its position
 # is ncontrols
 getflowindex(pb::AbstractNodalGrid) = cumsum(ncontrols.(pb.nodes))
-    
+
 
 # Build coupling constraint Aq + F for a grid.
 function buildconstr(pb::AbstractNodalGrid)
@@ -245,7 +245,7 @@ function buildconstr(pb::AbstractNodalGrid)
             cstr += pb.conn.linker * u[end-ninj+1:end]
         end
         return cstr
-    end 
+    end
     return constr
 end
 

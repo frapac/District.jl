@@ -29,7 +29,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
                       solverProblems::Vector{JuMP.Model},
                       scenarios::Array{Float64},
                       ninj::Int64)
-    
+
 
     T = model.stageNumber
     nb_forward = size(scenarios, 2)
@@ -51,7 +51,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
             # Collect current state and noise:
             xt = stockTrajectories[t, k, :]
             ξt = scenarios[t, k, :]
-            
+
             sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
                                               solverProblems[t], t, xt, ξt)
 
@@ -64,7 +64,7 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
                 costs[k] += sol.objval - sol.θ
                 if t==T-1
                     costs[k] += sol.θ
-                end       
+                end
             else
                 costs[k] = Inf
                 break

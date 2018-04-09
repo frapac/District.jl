@@ -30,13 +30,13 @@ using Gurobi
 #= using Clp =#
 # using CPLEX
 
-"Get LP solver."
 #= get_solver() = Gurobi.GurobiSolver(OutputFlag=false, MIPGap=.01) =#
 #get_solver() = CPLEX.CplexSolver(
 #                                 CPX_PARAM_SIMDISPLAY=0,
 #                                 CPX_PARAM_SCRIND=0,
 #                                 CPX_PARAM_QPMETHOD=2
 #                                )
+"Get LP solver."
 get_solver() = Gurobi.GurobiSolver(OutputFlag=false, Method=0)
 
 

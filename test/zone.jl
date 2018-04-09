@@ -11,7 +11,7 @@ using District, StochDynamicProgramming
 
 srand(2713)
 
- nbins = 1
+nbins = 1
 # We build three houses
 pb, xini = twelvehouse(nbins=nbins)
 
