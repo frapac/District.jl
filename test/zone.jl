@@ -9,6 +9,8 @@ push!(LOAD_PATH, "..")
 using Base.Test
 using District, StochDynamicProgramming
 
+# TODO: clean whenever possible
+include("../scripts/nodal/problem.jl")
 srand(2713)
 
 nbins = 1
