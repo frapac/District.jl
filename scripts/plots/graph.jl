@@ -18,13 +18,12 @@ function getshape(pb::Grid)
     shapes
 end
 
-
-
-
-
-
-
-
+"Get average flow stored in `u`."
+function getflow(pb, u, operation=mean)
+    nu = sum(District.ncontrols.(pb.nodes))
+    q = abs.(u[:, :, nu+1:end])
+    return vec(operation(operation(q, 2), 1))
+end
 
 "Display topology of graph specified by node-arc incidence matrix `A`."
 function plotgraph(A)

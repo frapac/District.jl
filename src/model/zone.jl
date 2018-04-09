@@ -40,8 +40,8 @@ function Zone(ts::AbstractTimeSpan,
     Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),Tuple{Int64,Int64}[],nothing)
 end
 
-nnodes(pb::ZonalGrid) = sum(length.([zone.borderindex for zone in pb.nodes]))
 nbordernodes(pb::Zone) = length(pb.borderindex)
+nnodes(pb::ZonalGrid) = sum(nbordernodes.([zone for zone in pb.nodes]))
 connectionsize(pb::Zone) = (ntimes(pb) - 1) * nbordernodes(pb)
 ninjection(pb::Zone) = nbordernodes(pb)
 swap!(zone::Zone, exch::Vector{Float64}) = swap!(zone.conn, exch)
@@ -71,7 +71,7 @@ function reducegrid(pb::Grid, membership::Vector{Int})
     zones = getzones(pb, membership)
 
     incidence = reducenetwork(pb, zones, membership)
-    println(size(incidence))
+
     updatebounds!(pb,zones,incidence)
 
     return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)) 
@@ -85,9 +85,10 @@ function getzones(pb::Grid, membership::Vector{Int})
     adjacencymatrix = getadjacence(pb.net.A)
     # Total number of zones
     nzones = maximum(membership)
+    zindex = getzoneorder(membership)
 
     # Fill the zones vector
-    for z in 1:nzones
+    for z in zindex
         # Index of the zone nodes
         belongtozone = membership .== z
         # Extract zone nodes
@@ -103,6 +104,18 @@ function getzones(pb::Grid, membership::Vector{Int})
     end
 
     return zones
+end
+
+function getzoneorder(membership::Vector{Int})
+    zindex = Int64[]
+    int=0
+    for i in membership
+        if i != int
+            push!(zindex,i)
+            int = i
+        end
+    end
+    return zindex
 end
 
 "Returns the vector of indices of the border nodes in a zone"
@@ -136,11 +149,10 @@ function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
     
     for zone in zones
         indexbordernodes = vcat(indexbordernodes, lastzoneindex + zone.borderindex)
-        lastzoneindex += length(zone.nodes)
+        lastzoneindex += nnodes(zone)
     end
     connexion = adjacencymatrix[ indexbordernodes , indexbordernodes ]
-    println(indexbordernodes)
-    println(connexion)
+    
     incidence = buildborderincidence(indexbordernodes, connexion, membership)
 
     return incidence
@@ -198,7 +210,6 @@ function objective(pb::Zone)
             vals = vcat(vals, uinj)
             coefs = vcat(coefs, [ pb.conn.values[t+nb*(ntimes(pb)-1)] for nb in 0:ninj-1 ])
             expr = JuMP.AffExpr(vals, coefs, 0.0)
-            expr += JuMP.QuadExpr(uinj, uinj, 1e-2*ones(ninj), 0.)
         end
         return expr
     end

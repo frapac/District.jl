@@ -58,7 +58,7 @@ set!(h::House, p::AbstractPrice) = set!(h.billing, p)
 nstocks(h::House) = sum(nstates.(h.devices))
 ncontrols(h::House) = sum(ncontrols.(h.devices))
 nnoises(h::House) = sum(nnoise.(h.noises))
-
+ninjection(h::House) = 1
 connectionsize(h::House) = ntimesteps(h.time) - 1
 
 function build!(house::House, x0::Vector{Float64};

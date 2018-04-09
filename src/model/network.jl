@@ -100,13 +100,6 @@ function getadjacence(A::Array{Float64, 2})
     return -L
 end
 
-"Get average flow stored in `u`."
-function getflow(pb, u, operation=mean)
-    nu = sum(District.ncontrols.(pb.nodes))
-    q = abs.(u[:, :, nu+1:end])
-    return vec(operation(operation(q, 2), 1))
-end
-
 getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]
 
 """

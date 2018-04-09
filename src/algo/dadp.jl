@@ -93,7 +93,7 @@ end
 Build DADP solver.
 """
 function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
-    if typeof(pb) == District.ZonalGrid
+    if typeof(pb) == ZonalGrid
         if ~checkconsistency(pb, ZoneInterface)
             error("Wrong interfaces inside `pb.nodes`. Use `ZoneInterface`
                      for price decomposition")
@@ -104,10 +104,10 @@ function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
                   for price decomposition")
         end
     end
-    nnodes = District.nnodes(pb)
+    nbnodes = nnodes(pb)
     ntime = ntimes(pb)
 
-    F = zeros(Float64, nnodes, ntime-1)
+    F = zeros(Float64, nbnodes, ntime-1)
     Q = zeros(Float64, ntime-1, pb.net.narcs)
     scen = [genscen(d.model, nsimu) for d in pb.nodes]
     # initiate mod with empty dictionnary
@@ -116,7 +116,9 @@ function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
     DADP(ntime, Inf, F, Q, algo, scen, nsimu, nit, mod)
 end
 
-function getinitialmultiplier(p::Vector{Float64}, sizelambda::Int64)
+function getinitialmultiplier(pb::AbstractGrid)
+    p = EDFPrice(pb.ts).price[1:end-1]
+    sizelambda = nnodes(pb)
     mul0 = p
     for i in 1:sizelambda-1
         mul0 = vcat(mul0, p)
@@ -140,36 +142,17 @@ function solve!(pb::AbstractGrid, dadp::DADP)
     solve!(pb.net)
 end
 
-function simulate!(pb::Grid, dadp::DADP)
-    dadp.cost = 0.
-    for (id, d) in enumerate(pb.nodes)
-        c, flow = mcsimulation(dadp.models[d.name], dadp.scen[id])
-        # take average of importation flows for Node `d`
-        dadp.F[id, :] = mean(flow, 2)
-        # take average of costs
-        dadp.cost -= mean(c)
-    end
-
-    # add transportation cost
-    dadp.cost -= pb.net.cost
-    # update Q flows inside DADP
-    copy!(dadp.Q, pb.net.Q)
-end
-
-function simulate!(pb::ZonalGrid, dadp::DADP)
+function simulate!(pb::AbstractGrid, dadp::DADP)
     dadp.cost = 0.
     nodeindex = 0
-    for (idzone, zone) in enumerate(pb.nodes)
-
-        c, flow = mcsimulation(dadp.models[zone.name], dadp.scen[idzone], zone)
-        for idborder in 1:nbordernodes(zone)
-            # take average of importation flows for Node `d`
-            dadp.F[nodeindex + idborder, :] = mean(flow[:,:,idborder], 2)
-        end
-
+    for (id, d) in enumerate(pb.nodes)
+        ninj = ninjection(d)
+        c, flow = mcsimulation(dadp.models[d.name], dadp.scen[id], ninj)
+        # take average of importation flows for Node `d`
+        dadp.F[nodeindex + (1:ninj), :] = mean(flow, 3)
         # take average of costs
         dadp.cost -= mean(c)
-        nodeindex += length(zone.borderindex)
+        nodeindex += ninj
     end
 
     # add transportation cost

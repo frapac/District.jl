@@ -196,6 +196,7 @@ function builddynamic(pb::AbstractNodalGrid)
 end
 
 function buildcost(pb::AbstractNodalGrid)
+    ninj = ninjection(pb)
     function costgrid(m, t, x, u, w)
         # production cost
         cost = AffExpr(0.)
@@ -207,11 +208,6 @@ function buildcost(pb::AbstractNodalGrid)
             xindex += nstocks(d)
             uindex += ncontrols(d)
         end
-        # Zone connection cost
-        ninj = ninjection(pb)
-        if ninj > 0
-            cost += objective(pb)(m, t, x, u, w)
-        end
         # transport cost
         na = narcs(pb)
         # take abs |.| of flow q
@@ -220,6 +216,11 @@ function buildcost(pb::AbstractNodalGrid)
         @constraint(m, qp .>= -u[end-ninj-na+1:end-ninj])
         # add transportation cost to cost
         cost += pb.net.k1*sum(qp) + pb.net.k2 * dot(qp, qp)
+        
+        # Zone connection cost        
+        if ninj > 0
+            cost += objective(pb)(m, t, x, u, w)
+        end
         return cost
     end
     return costgrid
