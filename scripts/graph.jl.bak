@@ -1,0 +1,101 @@
+include("stress.jl")
+
+using PyPlot
+
+"Get adjacence matrix of node-arc incidence matrix `A`."
+function getadjacence(A::Array{Float64, 2})
+    nnodes = size(A, 1)
+    L = A * A'
+    for i in 1:nnodes
+        L[i, i] = 0
+    end
+    return -L
+end
+
+"Get average flow stored in `u`."
+function getflow(u, operation=mean)
+    nu = sum(District.ncontrols.(pb.nodes))
+    q = u[:, :, nu+1:end]
+    return vec(operation(operation(q, 2), 1))
+end
+
+"Display topology of graph specified by node-arc incidence matrix `A`."
+function plotgraph(A)
+    srand(11)
+    nnodes, narcs = size(A)
+    adjmat = getadjacence(A)
+    posx, posy = layout_spring_adj(adjmat)
+
+    scatter(posx, posy, s=100, color="k")
+
+    for i = 2:nnodes, j=1:i
+        if adjmat[i, j] != 0.
+            plot([posx[i], posx[j]], [posy[i], posy[j]], c="k")
+        end
+    end
+    axis("off")
+
+end
+
+"Display flow `q` on graph specified by node-arc incidence matrix `A`."
+function plotflow(A, q, pb)
+    close("all")
+    #figure()
+    
+    srand(11)
+    nnodes, narcs = size(A)
+    adjmat = getadjacence(A)
+    posx, posy = layout_spring_adj(adjmat)
+
+
+    qmax = maximum(abs.(q))
+    
+
+    idarc = 1
+    for edge in 1:narcs
+        pos = find(x->(x!=0), A[:, edge])
+        α = abs(q[edge] / qmax)
+        
+        # i, j = pos[1], pos[2]
+        # plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=4., zorder=1)
+        
+        if q[edge] >= 0
+            i, j = pos[1], pos[2]
+        else q[edge] < 0
+            i, j = pos[2], pos[1]
+        end
+
+        if q[edge] != 0.
+            arrow(posx[i], posy[i], posx[j] - posx[i], posy[j] - posy[i], width=0.02, head_width=0.12, head_length=0.12, length_includes_head=true,overhang=1, fill=false)
+        end
+
+        plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=4., zorder=1)
+    end
+    
+
+    marker = Array{String}(nnodes)
+    color = Array{String}(nnodes)
+    for i in 1:nnodes
+        # if there is a solar panel
+        if size(pb.nodes[i].noises,1) == 2
+            # if there is a battery
+            if typeof(pb.nodes[i].devices[1]) == District.Battery
+                marker[i] = "^"
+                color[i] = "g"
+            else
+                marker[i] = "^"
+                color[i] = "y"
+            end
+        else
+            marker[i] = "o"
+            color[i] = "r"
+        end
+    end
+
+    for i in 1:nnodes
+        scatter(posx[i], posy[i], s=70, color=color[i], zorder=2, marker=marker[i])
+    end
+
+    axis("off")
+
+end

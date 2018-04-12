@@ -18,34 +18,20 @@ function getshape(pb::Grid)
     shapes
 end
 
-
-"Get adjacence matrix of node-arc incidence matrix `A`."
-function getadjacence(A::Array{Float64, 2})
-    nnodes = size(A, 1)
-    L = A * A'
-    for i in 1:nnodes
-        L[i, i] = 0
-    end
-    return -L
-end
-
-"Get laplacian matrix of node-arc incidence matrix `A` with weight q."
-function getlaplacian(A::Array{Float64, 2}, q::Array{Float64, 1})
-    return A * diagm(q) * A'
-end
-
 "Get average flow stored in `u`."
-function getflow(u, operation=mean)
+function getflow(pb, u, operation=mean)
     nu = sum(District.ncontrols.(pb.nodes))
-    q = u[:, :, nu+1:end]
+    q = abs.(u[:, :, nu+1:end])
     return vec(operation(operation(q, 2), 1))
 end
 
 "Display topology of graph specified by node-arc incidence matrix `A`."
 function plotgraph(A)
     srand(11)
+    figure()
+    
     nnodes, narcs = size(A)
-    adjmat = getadjacence(A)
+    adjmat = District.getadjacence(A)
     posx, posy = layout_spring_adj(adjmat)
 
     scatter(posx, posy, s=100, color="k")
@@ -62,7 +48,7 @@ end
 function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
     srand(11)
     nnodes, narcs = size(A)
-    adjmat = getadjacence(A)
+    adjmat = District.getadjacence(A)
     posx, posy = layout_spring_adj(adjmat)
 
 
@@ -105,24 +91,24 @@ function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
                   head_width=0.03, head_length=0.05, fc="k")
         end
     end
+    
     scatter(posx, posy, s=150, color=getshape(pb), zorder=2)
 
     axis("off")
 end
 
 "Display zonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotzone(A, flow; darrow=false, offset=.05, alpha=.1, ncluster=3)
+function plotzone(A, membership; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
-    q = mean(mean(abs.(flow),2),1)
 
     srand(11)
     figure()
     nnodes, narcs = size(A)
-    adjmat = getadjacence(A)
+    adjmat = District.getadjacence(A)
     posx, posy = layout_spring_adj(adjmat)
 
 
-    qmax = maximum(abs.(q))
+    qmax = maximum(q)
 
     idarc = 1
     for edge in 1:narcs
@@ -151,21 +137,8 @@ function plotzone(A, flow; darrow=false, offset=.05, alpha=.1, ncluster=3)
         end
     end
 
-
-    laplacian =  getlaplacian(A,q[1,1,:])
-
-    res = spectralclustering(laplacian, ncluster)
-
-
-    # Coloring nodes
-    membership = res.assignments
-
     scatter(posx, posy, s=150, c=membership, zorder=2)
     axis("off")
     title("cluster")
-
-    figure()
-    plot(eigvals(laplacian))
-    plot([ncluster, ncluster], [0, maximum(eigvals(laplacian))], c=(0., 0., 1.), lw=1, zorder=1 )
 
 end

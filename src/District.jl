@@ -11,6 +11,7 @@ module District
 using JLD
 using JuMP
 using Scenarios, StochDynamicProgramming
+using Clustering
 using JSON, ProgressMeter, MacroTools
 
 
@@ -48,6 +49,9 @@ include("model/samples.jl")
 include("model/network.jl")
 # Grid definition
 include("model/grid.jl")
+# Zone definition
+include("model/zone.jl")
+
 
 ##########
 # ALGO
@@ -63,6 +67,8 @@ include("algo/dadp.jl")
 include("algo/padp.jl")
 include("algo/madp.jl")
 include("algo/admm.jl")
+# Spectral clustering algorithm
+include("algo/spectralclustering.jl")
 
 ##########
 # SIMULATION

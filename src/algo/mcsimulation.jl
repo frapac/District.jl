@@ -20,21 +20,23 @@ Costs along assessment scenarios.
 * `import::Array{Float64, 2}` size=(ntime, nscen)
 Importation along assessment scenarios.
 """
-function mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3})
-    return mcsimulation(sddp.spmodel, sddp.params, sddp.solverinterface, scenarios)
+function mcsimulation(sddp::StochDynamicProgramming.SDDPInterface, scenarios::Array{Float64, 3}, ninjection::Int64)
+    return mcsimulation(sddp.spmodel, sddp.params, sddp.solverinterface, scenarios, ninjection)
 end
 
 function mcsimulation(model::StochDynamicProgramming.SPModel,
                       param::StochDynamicProgramming.SDDPparameters,
                       solverProblems::Vector{JuMP.Model},
-                      scenarios::Array{Float64})
+                      scenarios::Array{Float64},
+                      ninj::Int64)
+
 
     T = model.stageNumber
     nb_forward = size(scenarios, 2)
 
     stockTrajectories = zeros(T, nb_forward, model.dimStates)
     # import is last position in controls
-    importation = zeros(T - 1, nb_forward)
+    importation = zeros(ninj, T - 1, nb_forward)
 
     # Set first value of stocks equal to x0:
     for k in 1:nb_forward
@@ -53,13 +55,19 @@ function mcsimulation(model::StochDynamicProgramming.SPModel,
             sol, ts = StochDynamicProgramming.solve_one_step_one_alea(model, param,
                                               solverProblems[t], t, xt, ξt)
 
-            # extract sensitivity
-            stockTrajectories[t+1, k, :] = sol.xf
-            importation[t, k] = sol.uopt[end]
-            # and the current cost:
-            costs[k] += sol.objval - sol.θ
-            if t==T-1
-                costs[k] += sol.θ
+            if sol.status
+                # extract sensitivity
+                importation[:, t, k] = sol.uopt[end-ninj+1:end]
+
+                stockTrajectories[t+1, k, :] = sol.xf
+                # and the current cost:
+                costs[k] += sol.objval - sol.θ
+                if t==T-1
+                    costs[k] += sol.θ
+                end
+            else
+                costs[k] = Inf
+                break
             end
         end
     end

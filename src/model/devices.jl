@@ -558,11 +558,11 @@ struct GraphConnection <: AbstractConnection
     minkva::Float64
     maxkva::Float64
 end
+
 # By default, Node is prosumer
 GraphConnection(kva::Float64) = GraphConnection(-kva, kva)
 
-parsedevice(conn::GraphConnection, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
-
+parsedevice(conn::AbstractConnection, xindex::Int, uindex::Int, dt::Float64, p::Dict=Dict()) = Expr[]
 elecload(conn::GraphConnection, uindex::Int) = :(-u[$uindex])
 nstates(conn::GraphConnection) = 0
 ncontrols(conn::GraphConnection) = 1
