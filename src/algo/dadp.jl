@@ -24,7 +24,7 @@ abstract type AbstractDecompositionSolver <: AbstractSolver end
 
 Return Bellman lower bound obtained by decomposition solver.
 """
-function lowerbound(pb::Grid, algo::AbstractDecompositionSolver)
+function lowerbound(pb::AbstractGrid, algo::AbstractDecompositionSolver)
     lb = 0.
     for d in pb.nodes
         subpb = algo.models[d.name]
@@ -187,7 +187,7 @@ function _update!(pb::AbstractGrid, algo::AbstractDecompositionSolver, x::Vector
 end
 
 # oracle return a cost function `f` and a gradient function `grad!`
-# corresponding to the transporation problem.
+# corresponding to the transportation problem.
 function oracle(pb::AbstractGrid, algo::AbstractDecompositionSolver)
     xp = UInt64(0)
     function f(x)

@@ -132,7 +132,7 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
     constr = buildconstr(pb)
     # build global noise laws (warning: |WW| may be very large)
     if generation == "reduction"
-        laws = buildlaws(pb, noptscen, nbins)
+        laws = buildlaws(pb,nbins)
     elseif generation == "total"
         # warning: usually intractable!!
         laws = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
@@ -253,25 +253,108 @@ end
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
-function buildlaws(pb::AbstractNodalGrid, nscen=100, nbins=10)
-    # get total number of uncertainties
-    nw = sum(nnoises.(pb.nodes))
+# function buildlaws(pb::AbstractNodalGrid, nscen=100, nbins=10)
+#     # get total number of uncertainties
+#     nw = sum(nnoises.(pb.nodes))
 
-    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+#     scenarios = zeros(Float64, ntimes(pb), nscen, nw)
 
-    iw = 1
+#     iw = 1
 
-    for node in pb.nodes
-        for ξ in node.noises
-            ntw = nnoise(ξ)
-            scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
-            iw += ntw
+#     for node in pb.nodes
+#         for ξ in node.noises
+#             ntw = nnoise(ξ)
+#             scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
+#             iw += ntw
+#         end
+#     end
+#     # then, we quantize vectors in `nw` dimensions
+#     return WhiteNoise(scenarios, nbins, KMeans())
+# end
+
+function buildlaws(pb::AbstractNodalGrid, nbins=10)
+    if nnodes(pb) > 3
+        #We split the nodes in three almost-equal parts
+        Type = typeof(pb)
+        newsize = Int(floor(nnodes(pb)/3))
+        
+        nodes1 = pb.nodes[1:newsize]
+        nodes2 = pb.nodes[(newsize+1):(2*newsize)]
+        nodes3 = pb.nodes[(2*newsize+1):end]
+
+        pb1 = Grid(pb.ts, nodes1, pb.net)
+        pb2 = Grid(pb.ts, nodes2, pb.net)
+        pb3 = Grid(pb.ts, nodes3, pb.net)
+
+        onenode = [length(nodes1) == 1, length(nodes2) == 1, length(nodes3) == 1] 
+        globallaw1 = onenode[1] ? towhitenoise(nodes1[1].model.noises) : buildlaws(pb1, nbins)
+        globallaw2 = onenode[2] ? towhitenoise(nodes2[1].model.noises) : buildlaws(pb2, nbins)
+        globallaw3 = onenode[3] ? towhitenoise(nodes3[1].model.noises) : buildlaws(pb3, nbins)
+
+        model1 = StochDynamicProgramming.LinearSPModel(0, [], [], nothing, (t, x, u, w) -> 0., tonoiselaws(globallaw1))
+        model2 = StochDynamicProgramming.LinearSPModel(0, [], [], nothing, (t, x, u, w) -> 0., tonoiselaws(globallaw2))
+        model3 = StochDynamicProgramming.LinearSPModel(0, [], [], nothing, (t, x, u, w) -> 0., tonoiselaws(globallaw3))
+
+        node1 = House(pb.ts)
+        node1.model = model1
+        node1.noises = vcat([node.noises for node in nodes1]...)
+        node2 = House(pb.ts)
+        node2.model = model2
+        node2.noises = vcat([node.noises for node in nodes2]...)
+        node3 = House(pb.ts)
+        node3.model = model3
+        node3.noises = vcat([node.noises for node in nodes3]...)
+
+        newpb = Grid(pb.ts, [node1, node2, node3], pb.net)
+
+        return buildlaws(newpb,nbins)
+
+    else
+        # get total number of uncertainties
+        nw = sum(nnoises.(pb.nodes))
+
+        globallaw = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
+        nscen = length(globallaw.laws[1])
+        scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+
+        for t in 1:ntimes(pb)
+            scenarios[t, :, :] = globallaw.laws[t].support
         end
+
+        weights = zeros(Float64, ntimes(pb), nscen)
+        for t in 1:ntimes(pb)
+            weights[t,:] = globallaw.laws[t].probas.values
+        end
+
+        # then, we quantize vectors in `nw` dimensions
+        return WhiteNoise(scenarios, weights, nbins, KMeans())
+
     end
-    # then, we quantize vectors in `nw` dimensions
-    return WhiteNoise(scenarios, nbins, KMeans())
 end
 
+"""Quantize scenarios time step by time step."""
+function WhiteNoise(scenarios::Array{Float64, 3}, weights::Array, nbins::Int, algo::Scenarios.AbstractQuantizer)
+    T, n, Nw = size(scenarios)
+    laws = DiscreteLaw[]
+
+    for t in 1:T
+        proba, support = quantize(algo, scenarios[t, :, :]', weights[t,:], nbins)
+        push!(laws, DiscreteLaw(support, proba))
+    end
+
+    WhiteNoise(laws)
+end
+
+function quantize(::KMeans, points, weights, nbins::Int)
+    # KMeans works only if nbins > 1
+    if nbins > 1
+        R = kmeans(points, nbins, weights= weights)
+        valid = R.counts .> 1e-6
+        return R.cweights[valid], R.centers[:, valid]', R.assignments
+    else
+        return [1.], mean(points, 2)', [1]
+    end
+end
 
 # Build real cost
 function getrealcost(pb::AbstractNodalGrid)
