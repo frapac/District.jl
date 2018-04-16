@@ -193,10 +193,10 @@ function house24(;nbins=1)
     h22 = load(ts, ElecHouse(pv=0, heat=0, bat="bat0", nbins=nbins))
     h23 = load(ts, ElecHouse(pv=0, heat=0, bat="", idhouse=2, nbins=nbins))
     h24 = load(ts, ElecHouse(pv=16, heat=0, bat="", idhouse=3, nbins=nbins))
-    houses = [h1, h2, h3, h4, h50 h6, h7, h8, h9, h10, h11, h12,
-              h13, h14, h15, h160 h17, h18, h19, h20, h21, h22, h23, h24]
+    houses = [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12,
+              h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23, h24]
     xini = Dict(
-                h1=> [.55, 2.]
+                h1=> [.55, 2.],
                 h2=> [2.],
                 h3=> [2.],
                 h4=> [.55, 2.],

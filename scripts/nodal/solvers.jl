@@ -7,16 +7,28 @@
 function runsddp(pb)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
-    params.max_iterations = 50
+    params.max_iterations = 100
     sddp = @time solve_SDDP(pb, params, 2, 1)
     return sddp
 end
 
 function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu = nsimu, nit = 20)
+    algo     = DADP(pb, nsimu=nsimu, nit=20)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
+
+    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+    return gdsc, algo
+end
+
+function qadp(pb; nsimu=1)
+    algo    = QADP(pb, nsimu=nsimu, nit=20)
+    f, grad! = District.oracle(pb, algo)
+    narcs   = District.narcs(pb)
+    ntime    = District.ntimes(pb) - 1
+    nx       = narcs * ntime
+    x0 = zeros(Float64, nx)
 
     gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=30)
     return gdsc, algo
@@ -44,7 +56,7 @@ function ipopt(pb; nsimu=1)
 end
 
 function quantdec(pb; nsimu=1)
-    algo     = PADP(pb, nsimu=nsimu, nit=10)
+    algo     = PADP(pb, nsimu=nsimu, nit=20)
     f, grad! = District.oracle(pb, algo)
     nnodes   = District.nnodes(pb)
     ntime    = District.ntimes(pb) - 1
@@ -79,7 +91,7 @@ function quantdec(pb; nsimu=1)
     prob.x = zeros(Float64, nx)
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 10)
+    addOption(prob, "max_iter", 20)
     @time solveProblem(prob)
     return prob, algo
 end

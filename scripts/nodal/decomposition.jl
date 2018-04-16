@@ -15,13 +15,17 @@ include("solvers.jl")
 
 srand(2713)
 
-ALGO = "SDDP"
+ALGO = "DADP"
 
-pb, xini = twohouse(nbins=10)
+pb, xini = house24(nbins=10)
 
 if ALGO == "DADP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    _, algo = bfgs(pb, nsimu=200)
+    _, algo = bfgs(pb, nsimu=1000)
+    pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
+elseif ALGO == "QADP"
+    build!(pb, xini, FlowInterface, maxflow=6.)
+    _, algo = qadp(pb, nsimu=1000)
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "IPOPT"
     build!(pb, xini, PriceInterface, maxflow=6.)
@@ -29,10 +33,10 @@ elseif ALGO == "IPOPT"
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "PADP"
     build!(pb, xini, FlowInterface, maxflow=6.)
-    _, algo = quantdec(pb, nsimu=100)
+    _, algo = quantdec(pb, nsimu=500)
     pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pb.nodes])
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    sim  = Simulator(pb, 1000, generation="total", nbins=50, outsample=false)
+    sim  = Simulator(pb, 1, generation="reduction", nbins=80, outsample=false)
     algo = runsddp(sim.model)
 end
