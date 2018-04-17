@@ -8,9 +8,9 @@ function getshape(pb::Grid)
     shapes = String[]
     for d in pb.nodes
         if hasbattery(d) && haspv(d)
-            push!(shapes, "darkred")
+            push!(shapes, "red")
         elseif haspv(d)
-            push!(shapes, "darkgreen")
+            push!(shapes, "green")
         else
             push!(shapes, "black")
         end
@@ -34,13 +34,14 @@ function plotgraph(A)
     adjmat = District.getadjacence(A)
     posx, posy = layout_spring_adj(adjmat)
 
-    scatter(posx, posy, s=100, color="k")
-
     for i = 2:nnodes, j=1:i
         if adjmat[i, j] != 0.
             plot([posx[i], posx[j]], [posy[i], posy[j]], c="k")
         end
     end
+
+    scatter(posx, posy, s=100, color=getshape(pb))
+
     axis("off")
 end
 
@@ -98,7 +99,7 @@ function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
 end
 
 "Display zonal decomposition and flow `q` on graph specified by node-arc incidence matrix `A`."
-function plotzone(A, membership; darrow=false, offset=.05, alpha=.1, ncluster=3)
+function plotzone(A, q, membership; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
 
     srand(11)
@@ -139,6 +140,6 @@ function plotzone(A, membership; darrow=false, offset=.05, alpha=.1, ncluster=3)
 
     scatter(posx, posy, s=150, c=membership, zorder=2)
     axis("off")
-    title("cluster")
+    title("Grid clustering")
 
 end

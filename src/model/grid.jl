@@ -132,7 +132,7 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
     constr = buildconstr(pb)
     # build global noise laws (warning: |WW| may be very large)
     if generation == "reduction"
-        laws = buildlaws(pb, noptscen, nbins)
+        laws = buildlaws(pb, nbins=nbins)
     elseif generation == "total"
         # warning: usually intractable!!
         laws = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
@@ -253,25 +253,60 @@ end
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
-function buildlaws(pb::AbstractNodalGrid, nscen=100, nbins=10)
-    # get total number of uncertainties
-    nw = sum(nnoises.(pb.nodes))
+# function buildlaws(pb::AbstractNodalGrid; nscen=100, nbins=10)
+#     # get total number of uncertainties
+#     nw = sum(nnoises.(pb.nodes))
 
-    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
+#     scenarios = zeros(Float64, ntimes(pb), nscen, nw)
 
-    iw = 1
+#     iw = 1
 
-    for node in pb.nodes
-        for ξ in node.noises
-            ntw = nnoise(ξ)
-            scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
-            iw += ntw
-        end
-    end
-    # then, we quantize vectors in `nw` dimensions
-    return WhiteNoise(scenarios, nbins, KMeans())
+#     for node in pb.nodes
+#         for ξ in node.noises
+#             ntw = nnoise(ξ)
+#             scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
+#             iw += ntw
+#         end
+#     end
+#     # then, we quantize vectors in `nw` dimensions
+#     return WhiteNoise(scenarios, nbins, KMeans())
+# end
+
+function buildlaws(pb::AbstractNodalGrid; nbins::Int=10)
+    # Extract laws for each node
+    nodesnoises = vcat([towhitenoise(node.model.noises) for node in pb.nodes]...)
+
+    return reducelaws(nodesnoises, nbins=nbins)
 end
 
+"Reduction of vector of noise processes.
+
+When prodprocess between the noise processes is computationaly impossible, we apply a recursive three-by-three reduction by applying a k-means algorithm."
+function reducelaws(nodesnoises::Array; nbins::Int=10)
+    nnodes = length(nodesnoises)
+    
+    if nnodes == 1
+        return nodesnoises[1]
+    elseif nnodes <= 3
+        return resample(nodesnoises, nbins)
+    else
+        #We split the nodes in three almost-equal parts
+        newsize = Int(floor(nnodes/3))
+        
+        nodesnoises1 = nodesnoises[1:newsize]
+        nodesnoises2 = nodesnoises[(newsize+1):(2*newsize)]
+        nodesnoises3 = nodesnoises[(2*newsize+1):end]
+
+        globallaw1 = reducelaws(nodesnoises1, nbins=10)
+        globallaw2 = reducelaws(nodesnoises2, nbins=10)
+        globallaw3 = reducelaws(nodesnoises3, nbins=10)
+
+        newnodesnoises = vcat([globallaw1, globallaw2, globallaw3]...)
+
+        return resample(newnodesnoises, nbins)
+
+    end
+end
 
 # Build real cost
 function getrealcost(pb::AbstractNodalGrid)
