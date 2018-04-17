@@ -34,6 +34,7 @@ mutable struct Network <: AbstractNetwork
     maxflow::Vector{Float64}
     # multiplier
     λ::Array{Float64, 2}
+    μ::Array{Float64, 2}
     # node imports
     F::Array{Float64, 2}
     # transport cost
@@ -44,6 +45,7 @@ function Network(ts, A; qmax=6., k1=0., k2=1e-2)
     ntime = ntimesteps(ts)
     nnodes, narcs = size(A)
     λ = zeros(Float64, ntime-1, nnodes)
+    μ = zeros(Float64, ntime-1, narcs)
     F = zeros(Float64, ntime-1, nnodes)
     Q = zeros(Float64, ntime-1, narcs)
     # Build max flow through arcs
@@ -55,13 +57,22 @@ function Network(ts, A; qmax=6., k1=0., k2=1e-2)
         error("Unvalid `qmax`: must be a Float64 or a Vector with size `narcs`")
     end
 
-    return Network(ntime, Inf, Q, A, narcs, maxflow, λ, F, k1, k2)
+    return Network(ntime, Inf, Q, A, narcs, maxflow, λ, μ, F, k1, k2)
 end
 
 nnodes(net::Network) = size(net.A, 1)
 
 "Set multipliers inside Network `net`."
-swap!(net::Network, mul) = net.λ[:] = mul
+function swap!(net::Network, mul)
+    if length(mul) == nnodes(net) * (net.ntime -1)
+        net.λ[:] = mul
+    elseif length(mul) == net.narcs * (net.ntime -1)
+        net.μ[:] = mul
+    else
+        error("Unable to swap network as `mul` has wrong shape. Must be consistent with number of
+              nodes or number of arcs.")
+    end
+end
 
 """Build incidence matrix and return flows' bounds."""
 function buildincidence(connexion::Array{Float64})
@@ -105,20 +116,18 @@ getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]
 """
     flowallocation(net::Network)
 
-Compute the injection flows at nodes, as
-
-`` A * q ``
-
-with `A` node-arc incidence matrix of network and `q` current flows
+Compute the injection flows at nodes, as `A * q`.
+With `A` node-arc incidence matrix of network and `q` current flows
 through edges (stored in `net.Q`).
 """
-function flowallocation(net::Network)
+function flowallocation(net::Network, Q::Array{Float64, 2})
     dg = zeros(Float64, net.ntime-1, nnodes(net))
     for t in 1:(net.ntime - 1)
-        q = net.Q[t, :]
+        q = Q[t, :]
         dg[t, :] = (net.A*q)[:]
     end
     return dg[:]
 end
+flowallocation(net::Network) = flowallocation(net, net.Q)
 
 getcost(net::Network, q::Vector{Float64}) = net.k1*sum(abs.(q)) + net.k2*dot(q, q)

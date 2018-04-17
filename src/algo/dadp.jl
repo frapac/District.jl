@@ -8,7 +8,7 @@
 #      s.t. A Q + F = 0
 ################################################################################
 
-export DADP
+export DADP, lowerbound
 
 import Base: Base.show
 

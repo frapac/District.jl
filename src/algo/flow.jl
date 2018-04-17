@@ -80,6 +80,49 @@ function qsolve!(net::Network)
     net.Q = qa
 end
 
+"""Solve transport problem in primal."""
+function flowsolve!(net::Network)
+    k1, k2 = net.k1, net.k2
+
+    narcs = net.narcs
+    qa = zeros(Float64, net.ntime-1, size(net.A, 2))
+    pcost = 0.
+    flow = net.μ
+
+    for t in 1:net.ntime-1
+        f = @view flow[t, :]
+        m = Model(solver=get_solver())
+        @variable(m, -net.maxflow[i] <= q[i=1:narcs] <= net.maxflow[i])
+
+        # equilibrium
+        eq = @constraint(m, q - f .== 0)
+
+        # take qp = |q|
+        @variable(m, qp)
+        @constraint(m, qp .>=  q)
+        @constraint(m, qp .>= -q)
+
+        @objective(m, :Min, k1*sum(qp) + k2*dot(q, q))
+
+        # solve problem
+        status = JuMP.solve(m)
+        if status != :Optimal
+            println(sum(f))
+            println(m)
+        end
+        @assert status == :Optimal
+
+        qa[t, :] = getdual(eq)
+
+        # update multiplier
+        pcost += getobjectivevalue(m)
+    end
+
+    # update q
+    net.cost = pcost
+    net.Q = qa
+end
+
 
 # TODO: update this function
 function admmsolve!(net::Network, F, τ)

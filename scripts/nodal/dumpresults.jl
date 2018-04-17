@@ -1,41 +1,43 @@
 
 N = District.nnodes(pb)
+FOLD = "$N-d"
+COM = ".1000"
 
 
 ################################################################################
 if ALGO == "SDDP"
-    writecsv("results/nodal/$N/sddp/exectime.csv", algo.stats.exectime)
-    writecsv("results/nodal/$N/sddp/lb.csv", algo.stats.lower_bounds)
-    writecsv("results/nodal/$N/sddp/cuts.csv", algo.bellmanfunctions)
-    writecsv("results/nodal/$N/sddp/incost.csv", c)
+    writecsv("results/nodal/$FOLD/sddp/exectime.csv", algo.stats.exectime)
+    writecsv("results/nodal/$FOLD/sddp/lb.csv", algo.stats.lower_bounds)
+    writecsv("results/nodal/$FOLD/sddp/cuts.csv", algo.bellmanfunctions)
+    writecsv("results/nodal/$FOLD/sddp/incost.csv", c)
 
 ################################################################################
 elseif ALGO == "DADP"
 
     for (inode, n) in enumerate(pb.nodes)
         sp = algo.models[n.name]
-        writecsv("results/nodal/$N/dadp/$inode-cuts.csv", sp.bellmanfunctions)
-        writecsv("results/nodal/$N/dadp/$inode-exectime.csv", sp.stats.exectime)
-        writecsv("results/nodal/$N/dadp/$inode-lb.csv", sp.stats.lower_bounds)
-        writecsv("results/nodal/$N/dadp/$inode-values.csv", n.conn.values)
+        writecsv("results/nodal/$FOLD/dadp$COM/$inode-cuts.csv", sp.bellmanfunctions)
+        writecsv("results/nodal/$FOLD/dadp$COM/$inode-exectime.csv", sp.stats.exectime)
+        writecsv("results/nodal/$FOLD/dadp$COM/$inode-lb.csv", sp.stats.lower_bounds)
+        writecsv("results/nodal/$FOLD/dadp$COM/$inode-values.csv", n.conn.values)
     end
 
-    writecsv("results/nodal/$N/dadp/algo-F.csv", algo.F)
-    writecsv("results/nodal/$N/dadp/algo-Q.csv", algo.Q)
-    writecsv("results/nodal/$N/dadp/net.csv", pb.net.cost)
+    writecsv("results/nodal/$FOLD/dadp$COM/algo-F.csv", algo.F)
+    writecsv("results/nodal/$FOLD/dadp$COM/algo-Q.csv", algo.Q)
+    writecsv("results/nodal/$FOLD/dadp$COM/net.csv", pb.net.cost)
 
 ################################################################################
-elseif ALGO == "PADP"
+elseif ALGO == "PADP" || ALGO == "QADP"
 
     for (inode, n) in enumerate(pb.nodes)
         sp = algo.models[n.name]
-        writecsv("results/nodal/$N/qadp/$inode-cuts.csv", sp.bellmanfunctions)
-        writecsv("results/nodal/$N/qadp/$inode-exectime.csv", sp.stats.exectime)
-        writecsv("results/nodal/$N/qadp/$inode-lb.csv", sp.stats.lower_bounds)
-        writecsv("results/nodal/$N/qadp/$inode-values.csv", n.conn.values)
+        writecsv("results/nodal/$FOLD/qadp$COM/$inode-cuts.csv", sp.bellmanfunctions)
+        writecsv("results/nodal/$FOLD/qadp$COM/$inode-exectime.csv", sp.stats.exectime)
+        writecsv("results/nodal/$FOLD/qadp$COM/$inode-lb.csv", sp.stats.lower_bounds)
+        writecsv("results/nodal/$FOLD/qadp$COM/$inode-values.csv", n.conn.values)
     end
 
-    writecsv("results/nodal/$N/qadp/algo-F.csv", algo.λ)
-    writecsv("results/nodal/$N/qadp/algo-Q.csv", algo.μ)
-    writecsv("results/nodal/$N/qadp/net.csv", pb.net.cost)
+    writecsv("results/nodal/$FOLD/qadp$COM/algo-F.csv", algo.λ)
+    writecsv("results/nodal/$FOLD/qadp$COM/algo-Q.csv", algo.μ)
+    writecsv("results/nodal/$FOLD/qadp$COM/net.csv", pb.net.cost)
 end

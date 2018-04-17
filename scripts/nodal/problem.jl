@@ -157,3 +157,100 @@ function twelvehouse(;nbins=1)
 
     return pb, xini
 end
+
+################################################################################
+function house24(;nbins=1)
+    ts = TimeSpan(180, 1)
+
+    h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h3 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h4 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h5 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h6 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h7 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h8 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h9 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h10 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h11 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h12 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h13 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h14 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h15 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h16 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h17 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h18 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h19 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h20 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h21 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+
+    h22 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
+    h23 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
+    h24 = load(ts, ElecHouse(pv=4, heat=6, bat="", idhouse=3, nbins=nbins))
+    houses = [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12,
+              h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23, h24]
+    xini = Dict(
+                h1=> [.55, 2., 20., 20.],
+                h2=> [2., 20., 20.],
+                h3=> [2., 20., 20.],
+                h4=> [.55, 2., 20., 20.],
+                h5=> [2., 20., 20.],
+                h6=> [2., 20., 20.],
+                h7=> [.55, 2., 20., 20.],
+                h8=> [2., 20., 20.],
+                h9=> [2., 20., 20.],
+                h10=> [.55, 2., 20., 20.],
+                h11=> [2., 20., 20.],
+                h12=> [2., 20., 20.],
+                h13=> [.55, 2., 20., 20.],
+                h14=> [2., 20., 20.],
+                h15=> [2., 20., 20.],
+                h16=> [.55, 2., 20., 20.],
+                h17=> [2., 20., 20.],
+                h18=> [2., 20., 20.],
+                h19=> [.55, 2., 20., 20.],
+                h20=> [2., 20., 20.],
+                h21=> [2., 20., 20.],
+                h22=> [.55, 2., 20., 20.],
+                h23=> [2., 20., 20.],
+                h24=> [2., 20., 20.])
+
+
+    # create matrix of other graph with LighGraph
+    g = DiGraph()
+    # add 24 nodes to g
+    add_vertices!(g, 24)
+
+    # add different edges for zone A
+    nin = [1, 1, 1, 2, 3, 4, 4, 5, 6, 5, 7, 7, 8, 9, 10, 11]
+    nout = [2, 3, 10, 3, 5, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 12]
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+
+    # add different edges for zone B
+    nin = [1, 1, 2, 2, 3, 4, 5, 6, 6, 7, 9, 9, 10, 11] + 12
+    nout = [2, 9, 3, 4, 5, 5, 6, 7, 8, 8, 10, 11, 11, 12] + 12
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+    add_edge!(g, Edge(12, 13))
+    add_edge!(g, Edge(2, 24))
+    add_edge!(g, Edge(13, 11))
+    A = -Matrix(incidence_matrix(g))
+
+    net = Network(ts, A)
+    net.k2 = 1e-2
+    net.k1 = 1e-3
+    net.maxflow[:] = 6.
+
+    pb = Grid(ts, houses, net)
+
+    return pb, xini
+end
