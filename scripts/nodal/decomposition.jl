@@ -17,7 +17,7 @@ srand(2713)
 
 ALGO = "DADP"
 
-pb, xini = house24(nbins=10)
+pb, xini = sixhouse(nbins=10)
 
 if ALGO == "DADP"
     build!(pb, xini, PriceInterface, maxflow=6.)
