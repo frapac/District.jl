@@ -92,6 +92,7 @@ function quantdec(pb; nsimu=1)
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
     addOption(prob, "max_iter", 20)
+
     @time solveProblem(prob)
     return prob, algo
 end

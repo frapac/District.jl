@@ -22,7 +22,7 @@ immutable SDDP <: AbstractDPSolver
 end
 
 # SOLVER
-function solve(node::AbstractNode, sddp::SDDP)
+function solve(node, sddp::SDDP)
     params = get_sddp_solver()
     return solve_SDDP(node.model, params, 0, 0,
                       stopcrit=IterLimit(sddp.nit))

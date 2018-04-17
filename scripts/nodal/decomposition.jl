@@ -10,7 +10,7 @@ push!(LOAD_PATH, "..")
 using District
 using StochDynamicProgramming
 using Lbfgsb, Ipopt
-include("harsh.jl")
+include("problem.jl")
 include("solvers.jl")
 
 srand(2713)
@@ -38,5 +38,6 @@ elseif ALGO == "PADP"
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
     sim  = Simulator(pb, 1, generation="reduction", nbins=80, outsample=false)
+aster
     algo = runsddp(sim.model)
 end

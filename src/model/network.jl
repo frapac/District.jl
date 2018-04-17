@@ -75,12 +75,12 @@ function swap!(net::Network, mul)
 end
 
 """Build incidence matrix and return flows' bounds."""
-function buildincidence{T}(connexion::Matrix{T})
+function buildincidence(connexion::Array{Float64})
     nnodes = size(connexion, 1)
     narcs = floor(Int, sum(connexion .> 0.)/2)
 
     # incidence matrix
-    A = zeros(Int, nnodes, narcs)
+    A = zeros(Int64, nnodes, narcs)
 
     ic = 0
     bounds = Float64[]
@@ -92,7 +92,23 @@ function buildincidence{T}(connexion::Matrix{T})
             push!(bounds, connexion[ix, iy])
         end
     end
+
     return A, bounds
+end
+
+"Get laplacian matrix of node-arc incidence matrix `A` with weight q."
+function getlaplacian(A::Array{Float64, 2}, q::Array{Float64, 1})
+    return A * diagm(q) * A'
+end
+
+"Get adjacence matrix of node-arc incidence matrix `A`."
+function getadjacence(A::Array{Float64, 2})
+    nnodes = size(A, 1)
+    L = A * A'
+    for i in 1:nnodes
+        L[i, i] = 0
+    end
+    return -L
 end
 
 getmaxflow(pos)=sum(build_graph()[pos, pos], 1)[:]

@@ -4,15 +4,18 @@
 # Implement spectral clustering method.
 ################################################################################
 
-using Clustering
+export spectralclustering
 
+
+# TODO: make docstring
 #Input : a laplacian and a number of clusters
-#Output : returns an assignment vector that associates each point to a cluster 
-function spectralclustering(laplacian::Array{Float64,2}, nbClusters::Int64)
+#Output : returns an assignment vector that associates each point to a cluster
+function spectralclustering(laplacian::Array{Float64}, ncluster::Int64)
+    eigvectors = eigvecs(laplacian)
+    U = eigvectors[:,1:ncluster]  #nbclusters first eigen vectors
 
-	eigvectors = eigvecs(laplacian)
-	U = eigvectors[:,1:nbClusters]  #nbClusters first eigen vectors
-	
-	#Clustering of the rows of U among nbClusters clusters 
-	return Clustering.kmeans(U', nbClusters)
+    #Clustering of the rows of U among nbclusters clusters
+    clusterresult =  Clustering.kmeans(U', ncluster)
+
+    return clusterresult.assignments
 end

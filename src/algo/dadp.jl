@@ -87,21 +87,43 @@ mutable struct DADP <: AbstractDecompositionSolver
 end
 
 
-function DADP(pb::Grid; nsimu=100, nit=10, algo=SDDP(nit))
-    if ~checkconsistency(pb, PriceInterface)
-        error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
-              for price decomposition")
-    end
-    nnodes = length(pb.nodes)
-    ntime = ntimesteps(pb.nodes[1].time)
+"""
+    DADP(pb::Grid)
 
-    F = zeros(Float64, nnodes, ntime-1)
+Build DADP solver.
+"""
+function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
+    if typeof(pb) == ZonalGrid
+        if ~checkconsistency(pb, ZoneInterface)
+            error("Wrong interfaces inside `pb.nodes`. Use `ZoneInterface`
+                     for price decomposition")
+        end
+    else
+        if ~checkconsistency(pb, PriceInterface)
+            error("Wrong interfaces inside `pb.nodes`. Use `PriceInterface`
+                  for price decomposition")
+        end
+    end
+    nbnodes = nnodes(pb)
+    ntime = ntimes(pb)
+
+    F = zeros(Float64, nbnodes, ntime-1)
     Q = zeros(Float64, ntime-1, pb.net.narcs)
     scen = [genscen(d.model, nsimu) for d in pb.nodes]
     # initiate mod with empty dictionnary
     mod = Dict()
 
     DADP(ntime, Inf, F, Q, algo, scen, nsimu, nit, mod)
+end
+
+function getinitialmultiplier(pb::AbstractGrid)
+    p = EDFPrice(pb.ts).price[1:end-1]
+    sizelambda = nnodes(pb)
+    mul0 = p
+    for i in 1:sizelambda-1
+        mul0 = vcat(mul0, p)
+    end
+    return mul0
 end
 
 # We need three ingredients to build oracle:
@@ -111,7 +133,7 @@ end
 #                     trajectories via Monte Carlo with relaxed problem.
 #     iii) ∇g : eventually, compute subgradient along previous trajectories.
 
-function solve!(pb::Grid, dadp::DADP)
+function solve!(pb::AbstractGrid, dadp::DADP)
     # solve production subproblems
     for d in pb.nodes
         dadp.models[d.name] = solve(d, dadp.algo)
@@ -120,14 +142,17 @@ function solve!(pb::Grid, dadp::DADP)
     solve!(pb.net)
 end
 
-function simulate!(pb::Grid, dadp::DADP)
+function simulate!(pb::AbstractGrid, dadp::DADP)
     dadp.cost = 0.
+    nodeindex = 0
     for (id, d) in enumerate(pb.nodes)
-        c, flow = mcsimulation(dadp.models[d.name], dadp.scen[id])
+        ninj = ninjection(d)
+        c, flow = mcsimulation(dadp.models[d.name], dadp.scen[id], ninj)
         # take average of importation flows for Node `d`
-        dadp.F[id, :] = mean(flow, 2)
+        dadp.F[nodeindex + (1:ninj), :] = mean(flow, 3)
         # take average of costs
         dadp.cost -= mean(c)
+        nodeindex += ninj
     end
 
     # add transportation cost
@@ -136,7 +161,7 @@ function simulate!(pb::Grid, dadp::DADP)
     copy!(dadp.Q, pb.net.Q)
 end
 
-function ∇f(pb::Grid, dadp::DADP)
+function ∇f(pb::AbstractGrid, dadp::DADP)
     dg = zeros(Float64, dadp.ntime-1, nnodes(pb))
     for t in 1:(dadp.ntime - 1)
         f = dadp.F[:, t]
@@ -152,7 +177,7 @@ end
 ################################################################################
 # General oracle for decomposition
 ################################################################################
-function _update!(pb, algo, x)
+function _update!(pb::AbstractGrid, algo::AbstractDecompositionSolver, x::Vector{Float64})
     # update multiplier inside Grid `pb`
     swap!(pb, x)
     # resolve `pb` with these new multipliers
@@ -163,7 +188,7 @@ end
 
 # oracle return a cost function `f` and a gradient function `grad!`
 # corresponding to the transporation problem.
-function oracle(pb::Grid, algo::AbstractDecompositionSolver)
+function oracle(pb::AbstractGrid, algo::AbstractDecompositionSolver)
     xp = UInt64(0)
     function f(x)
         if hash(x) != xp
