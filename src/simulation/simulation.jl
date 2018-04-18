@@ -87,11 +87,11 @@ end
 
 
 # TODO: currently dynamics is the same as in optimization model
-function Simulator(n::AbstractNode, nassess::Int, outsample=true)
+function Simulator(n::AbstractNode, nassess::Int, gen::AbstractScenarioGenerator=OutSampleScenarios())
     xname, uname, wname = getcorrespondance(n)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
     ts = n.time
-    scen = outsample ? genassessments(ts, n.noises, nassess) : genscen(n.model, nassess)
+    scen = generate(gen, n, nassess)
     return Simulator(names, ts, n.model, scen, n.model.dynamics, getrealcost(n), realfinalcost)
 end
 
@@ -99,7 +99,7 @@ end
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
                    generation="reduction", nbins=10, noptscen=100,
-                   outsample=true, seed=-1)
+                   gen::AbstractScenarioGenerator=OutSampleScenarios())
     # Get names label
     xname, uname, wname = getcorrespondance(pb)
     names = Dict(:x=>xname, :u=>uname, :w=>wname)
@@ -108,11 +108,11 @@ function Simulator(pb::AbstractGrid, nassess::Int;
 
     # Model generation
     # if specified, set random seed
-    (seed > 0) && srand(seed)
+    (gen.seed > 0) && srand(gen.seed)
     # build global problem
     spmodel = getproblem(pb, generation, nbins, noptscen)
     # generate scenarios
-    scen = outsample ? genassessments(pb, nassess) : genscen(pb, nassess)
+    scen = generate(gen, pb, nassess)
     return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
                      getrealcost(pb), getrealfinalcost(pb))
 end
