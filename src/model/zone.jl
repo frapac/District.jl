@@ -46,14 +46,6 @@ struct ZonalGrid <: AbstractGrid
     # Edges
     net::AbstractNetwork
 end
-
-function Zone(ts::AbstractTimeSpan,
-    nodes::Vector{AbstractNode},
-    borderindex::Vector{Int64},
-    net::AbstractNetwork)
-    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),Tuple{Int64,Int64}[],nothing)
-end
-
 nnodes(pb::ZonalGrid) = sum(nbordernodes.([zone for zone in pb.nodes]))
 
 function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
