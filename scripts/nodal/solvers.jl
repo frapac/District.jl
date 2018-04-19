@@ -8,6 +8,7 @@ function runsddp(pb)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
     params.max_iterations = 100
+    params.compute_ub = -1
     sddp = @time solve_SDDP(pb, params, 2, 1)
     return sddp
 end

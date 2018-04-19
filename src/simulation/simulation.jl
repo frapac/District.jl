@@ -98,7 +98,7 @@ end
 
 # adapt Simulator for grid
 function Simulator(pb::AbstractGrid, nassess::Int;
-                   generation="reduction", nbins=10, noptscen=100,
+                   sampler::DiscreteLawSampler=DiscreteLawSampler(1, 1, 1),
                    gen::AbstractScenarioGenerator=OutSampleScenarios())
     # Get names label
     xname, uname, wname = getcorrespondance(pb)
@@ -110,7 +110,7 @@ function Simulator(pb::AbstractGrid, nassess::Int;
     # if specified, set random seed
     (gen.seed > 0) && srand(gen.seed)
     # build global problem
-    spmodel = getproblem(pb, generation, nbins, noptscen)
+    spmodel = getproblem(pb, sampler)
     # generate scenarios
     scen = generate(gen, pb, nassess)
     return Simulator(names, ts, spmodel, scen, spmodel.dynamics,
