@@ -6,7 +6,7 @@
 push!(LOAD_PATH, "..")
 
 using Base.Test
-using District, StochDynamicProgramming
+using District, StochDynamicProgramming, Scenarios
 
 srand(2713)
 
@@ -49,7 +49,7 @@ end
     A = [1. -1.]'
     # Time span
     ts = TimeSpan(180, 1)
-    nbins = 1
+    nbins = 10
     # we build two houses
     h1 = load(ts, ElecHouse(pv=4, heat=6, bat="bat0", nbins=nbins))
     h2 = load(ts, ElecHouse(pv=0, heat=6, bat="", idhouse=2, nbins=nbins))
@@ -98,24 +98,24 @@ end
 
     @testset "Global problem" begin
         # build global sp model
-        for gen in ["total", "reduction"]
-            sp = District.getproblem(pb, gen, nbins)
+        for nbins in [1, 10]
+            sp = District.getproblem(pb, DiscreteLawSampler(nbins, 5, 1))
             @test isa(sp, StochDynamicProgramming.SPModel)
-            @test sp.noises[1].supportSize == 1
+            @test sp.noises[1].supportSize == nbins
         end
     end
 
     @testset "Simulation" begin
         nassess = 1
-        nbins = 50
-        sim = Simulator(pb, nassess, generation="reduction", nbins=nbins)
+        nbins = 20
+        sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, 1))
         @test isa(sim, Simulator)
         @test sim.model.noises[1].supportSize == nbins
 
-        for sample in [false, true]
-            sim = Simulator(pb, nassess, generation="total", nbins=nbins, outsample=sample)
+        for Samples in [OutSampleScenarios, InSampleScenarios]
+            sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, 1), gen=Samples())
             @test isa(sim, Simulator)
-            @test sim.model.noises[1].supportSize == 1
+            @test sim.model.noises[1].supportSize == nbins
         end
     end
 end

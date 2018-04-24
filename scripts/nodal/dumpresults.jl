@@ -6,10 +6,10 @@ COM = ".1000"
 
 ################################################################################
 if ALGO == "SDDP"
-    writecsv("results/nodal/$FOLD/sddp/exectime.csv", algo.stats.exectime)
-    writecsv("results/nodal/$FOLD/sddp/lb.csv", algo.stats.lower_bounds)
-    writecsv("results/nodal/$FOLD/sddp/cuts.csv", algo.bellmanfunctions)
-    writecsv("results/nodal/$FOLD/sddp/incost.csv", c)
+    writecsv("results/nodal/$FOLD/sddp$COM/exectime.csv", algo.stats.exectime)
+    writecsv("results/nodal/$FOLD/sddp$COM/lb.csv", algo.stats.lower_bounds)
+    writecsv("results/nodal/$FOLD/sddp$COM/cuts.csv", algo.bellmanfunctions)
+    writecsv("results/nodal/$FOLD/sddp$COM/incost.csv", c)
 
 ################################################################################
 elseif ALGO == "DADP"

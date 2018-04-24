@@ -96,7 +96,7 @@ end
 ################################################################################
 initpos(pb::AbstractNodalGrid) = vcat([h.model.initialState for h in pb.nodes]...)
 
-function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, noptscen=100)
+function getproblem(pb::AbstractNodalGrid, sampler::DiscreteLawSampler)
     # to avoid world age problem, we rebuild elecload and gasload
     # right now.
     uindex = 1
@@ -131,12 +131,7 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
     # build coupling constraint Aq+f, modeling graph topology
     constr = buildconstr(pb)
     # build global noise laws (warning: |WW| may be very large)
-    if generation == "reduction"
-        laws = buildlaws(pb, noptscen, nbins)
-    elseif generation == "total"
-        # warning: usually intractable!!
-        laws = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
-    end
+    laws = sampler([towhitenoise(n.model.noises) for n in pb.nodes])
 
     spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
                                                   x0, costm,
@@ -248,30 +243,6 @@ function buildconstr(pb::AbstractNodalGrid)
     end
     return constr
 end
-
-# Build probability laws for grid `pb`.
-# WARNING
-# Subject to curse of dimensionality (build laws in high dimension).
-# TODO: can build very large 3D arrays...
-function buildlaws(pb::AbstractNodalGrid, nscen=100, nbins=10)
-    # get total number of uncertainties
-    nw = sum(nnoises.(pb.nodes))
-
-    scenarios = zeros(Float64, ntimes(pb), nscen, nw)
-
-    iw = 1
-
-    for node in pb.nodes
-        for ξ in node.noises
-            ntw = nnoise(ξ)
-            scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
-            iw += ntw
-        end
-    end
-    # then, we quantize vectors in `nw` dimensions
-    return WhiteNoise(scenarios, nbins, KMeans())
-end
-
 
 # Build real cost
 function getrealcost(pb::AbstractNodalGrid)

@@ -254,3 +254,76 @@ function house24(;nbins=1)
 
     return pb, xini
 end
+
+
+################################################################################
+function house48(;nbins=1)
+    ts = TimeSpan(180, 1)
+
+
+    houses = []
+    xini = Dict()
+    for i in 1:16
+        h1 = load(ts, ElecHouse(pv=0, heat=0, bat="bat0", nbins=nbins))
+        h2 = load(ts, ElecHouse(pv=0, heat=0, bat="", idhouse=2, nbins=nbins))
+        h3 = load(ts, ElecHouse(pv=16, heat=0, bat="", idhouse=3, nbins=nbins))
+
+        xini[h1] = [.55, 2.]
+        xini[h2] = [2.]
+        xini[h3] = [2.]
+        push!(houses, h1, h2, h3)
+    end
+
+    # create matrix of other graph with LighGraph
+    g = DiGraph()
+    # add 48 nodes to g
+    add_vertices!(g, 48)
+
+    # add different edges for zone A
+    nin = [1, 1, 1, 2, 3, 4, 4, 5, 6, 5, 7, 7, 8, 9, 10, 11]
+    nout = [2, 3, 10, 3, 5, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 12]
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+
+    # add different edges for zone B
+    nin = [1, 1, 2, 2, 3, 4, 5, 6, 6, 7, 9, 9, 10, 11] + 12
+    nout = [2, 9, 3, 4, 5, 5, 6, 7, 8, 8, 10, 11, 11, 12] + 12
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+    add_edge!(g, Edge(12, 13))
+    add_edge!(g, Edge(2, 24))
+    add_edge!(g, Edge(13, 11))
+
+    # add different edges for zone C
+    nin = [1, 1, 2, 2, 3, 4, 5, 6, 6, 7, 9, 9, 10, 11] + 24
+    nout = [2, 9, 3, 4, 5, 5, 6, 7, 8, 8, 10, 11, 11, 12] + 24
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+
+    # add different edges for zone D
+    nin = [1, 1, 1, 2, 3, 4, 4, 5, 6, 5, 7, 7, 8, 9, 10, 11] + 36
+    nout = [2, 3, 10, 3, 5, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 12] + 36
+    for (i, j) in zip(nin, nout)
+        add_edge!(g, Edge(i, j))
+    end
+    add_edge!(g, Edge(36, 37))
+    add_edge!(g, Edge(26, 48))
+    add_edge!(g, Edge(37, 35))
+
+    add_edge!(g, Edge(12, 37))
+    add_edge!(g, Edge(13, 25))
+
+    A = -Matrix(incidence_matrix(g))
+
+    net = Network(ts, A)
+    net.k2 = 1e-2
+    net.k1 = 0.
+    net.maxflow[:] = 6.
+
+    pb = Grid(ts, houses, net)
+
+    return pb, xini
+end
