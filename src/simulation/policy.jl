@@ -92,7 +92,8 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 
     m = Model(solver=get_solver())
 
-    @variable(m,  model.ulim[i][1] <= u[i=1:nu, j=1:ntime-1] <=  model.ulim[i][2])
+    @variable(m,  model.ulim[i][1] <= u[i=1:nu, j=1:ntime-1] <=  model.ulim[i][2],
+              category=model.controlCat[i])
     @variable(m,  model.xlim[i][1] <= x[i=1:nx, j=1:ntime] <= model.xlim[i][2])
 
     # TODO: clean final step
