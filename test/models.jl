@@ -106,8 +106,8 @@ using District, Scenarios
         params["pext"] = zeros(Float64, 96)
         # add devices list
         devices = [Battery, ElecHotWaterTank, ThermalHotWaterTank, R6C2, R6C2, MicroCHP,
-                ElecHeater, ThermalHeater, GraphConnection]
-        initid = ["bat0", "ehwt0", "twht0", "rt1988", "rt2012", "chp0", 6., 6., 6.]
+                ElecHeater, ThermalHeater, GraphConnection, Burner]
+        initid = ["bat0", "ehwt0", "twht0", "rt1988", "rt2012", "chp0", 6., 6., 6., 6.]
         # test devices
         for (Stock, ids) in zip(devices, initid)
             st = Stock(ids)

@@ -134,6 +134,7 @@ function load(ts::TimeSpan, prof::CHPHouse)
 
     hwt = ThermalHotWaterTank("twht0")
     add!(house, hwt)
+    penalize!(house, ThermalHotWaterTank, :(1. * max(0, 5 -x)))
 
     thm = R6C2(prof.env)
     add!(house, thm)
@@ -141,9 +142,13 @@ function load(ts::TimeSpan, prof::CHPHouse)
     heat = ThermalHeater(prof.heater)
     add!(house, heat)
 
+    boiler = Burner(4., yield=.9)
+    add!(house, boiler)
+
     join!(house, thm, heat)
     join!(house, hwt, heat)
     join!(house, hwt, chp)
+    join!(house, hwt, boiler)
 
     # import demands
     wdem = Demands(10, prof.idhouse)

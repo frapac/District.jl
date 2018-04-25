@@ -208,7 +208,7 @@ function addmax(model::JuMP.Model, z, ex::Expr)
 end
 
 # WIP: definition of final cost for a house
-# WARNING: We should not use Base.invokelatest
+# WARNING: TODO We should not use Base.invokelatest
 function buildfcost(house::House)
     fcost = house.billing.finalcost
     function final_cost(model, m)
@@ -419,6 +419,10 @@ end
 function link!(house::House, hwt::ThermalHotWaterTank, chp::MicroCHP, uind::Int, wind::Int)
     indu = uindex(house, chp) + uind
     push!(hwt.input.args, :($(thermalload(chp, indu))))
+end
+function link!(house::House, hwt::ThermalHotWaterTank, burner::Burner, uind::Int, wind::Int)
+    indu = uindex(house, burner) + uind
+    push!(hwt.input.args, :($(thermalload(burner, indu))))
 end
 
 # add heater to R6C2

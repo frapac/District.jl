@@ -3,13 +3,13 @@ push!(LOAD_PATH, "..")
 
 using District, StochDynamicProgramming
 
-ALGO = "SDDP"
+ALGO = "MPC"
 
 # Build problem
-ts = TimeSpan(1, 7)
+ts = TimeSpan(10, 1)
 house = District.load(ts, District.CHPHouse(bat="bat0"))
 
-x0 = [.55, 2., 16., 16.]
+x0 = [.55, 5., 17., 17.]
 District.build!(house, x0, info=:HD)
 
 
