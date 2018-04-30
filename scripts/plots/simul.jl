@@ -1,10 +1,5 @@
 # Macros to plot SimulationResults
-
-try
-    NSCEN = min(100, length(res.costs))
-catch
-    NSCEN = 100
-end
+NSCEN = 10
 
 macro ushow(res, ind, nscen=NSCEN)
     return :(plot($res.controls[:, 1:$nscen, $ind]))
@@ -26,12 +21,12 @@ function pplot(tab)
 end
 
 # Plot value functions
-function getgridvalues(gridb, gridh, vf)
+function getgridvalues(gridb, gridh, vf, to=20, ti=20)
     nx = length(gridb)
     ny = length(gridh)
     vals = zeros(Float64, nx, ny)
     for i = 1:nx, j = 1:ny
-        vals[i, j] = valcuts(vf, [gridb[i], gridh[j], 20., 20.])
+        vals[i, j] = valcuts(vf, [gridb[i], gridh[j], to, ti])
     end
 
     return vals
@@ -55,7 +50,23 @@ function plotvf(xx, yy, vals, ax=nothing)
         ax = fig[:add_subplot](1, 1, 1, projection="3d")
     end
     ax[:plot_surface](xx, yy, vals)
+    ax[:view_init](elev=30, azim=70)
     return ax
+end
+
+
+function plotbellman(gridb, gridh, vf, t)
+    xx = repmat(collect(gridb)', length(gridh))
+    yy = repmat(collect(gridh)', length(gridb))'
+    to = mean(res.stocks[t, :, 3])
+    ti = mean(res.stocks[t, :, 4])
+
+    vals = .25 * getgridvalues(gridb, gridh, vf[t], to, ti)
+    plotvf(xx, yy, vals')
+    xlabel("Battery level [kWh]")
+    ylabel("Tank level [kWh]")
+    zlabel("Value function [€]")
+    tight_layout()
 end
 
 function plotcomp(xx, yy)
