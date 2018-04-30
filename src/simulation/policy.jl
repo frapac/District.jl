@@ -66,14 +66,14 @@ mutable struct MPCPolicy <: AbstractMPCPolicy
     # MPC forecast
     forecast
     # Horizon
-    horizon
+    horizon::Int
     # Final time
     final
 end
 MPCPolicy(forecast) = MPCPolicy(Model(), get_solver(), forecast, -1, size(forecast, 1))
 
 # remaining time
-ntimesteps(mpc::MPCPolicy, t) = mpc.final - t + 1
+ntimesteps(mpc::MPCPolicy, t) = (mpc.horizon >= 1)? min(mpc.horizon, mpc.final- t +1) :  mpc.final - t + 1
 
 # TODO: clean
 function build_oracle(forecast)
@@ -98,7 +98,7 @@ function buildproblem!(mpc::MPCPolicy, model, t::Int)
 
     # TODO: clean final step
     @variable(m, zf >= 0)
-    @constraint(m, zf >= 2. - x[2, ntime])
+    @constraint(m, zf >= 5. - x[2, ntime])
 
     @variable(m, w[1:model.dimNoises, 1:ntime])
     m.ext[:noise] = @constraint(m, w[:, 1] .== oracle(t))

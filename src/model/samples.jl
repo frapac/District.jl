@@ -44,20 +44,6 @@ end
 ElecHouse(;pv=0, heat=3, bat="", env="rt2012", idhouse=1, nbins=10) = ElecHouse(pv, heat, bat, env, idhouse, nbins)
 
 
-function loadMultipleHouse(ts::TimeSpan, nnodes::Int64)
-    houseArray = Array{AbstractNode,1}(nnodes)
-    for i in 1:nnodes
-        solarpv = bitrand(1)
-        if solarpv[1]
-            houseArray[i] = load(ts, ElecHouse(pv=rand(1:10), heat=rand(2:6), bat="bat0"^rand(0:1), nbins=1))
-        else
-            houseArray[i] = load(ts, ElecHouse(pv=0, heat=rand(2:6), bat="", nbins=1))
-        end
-    end
-
-    return houseArray
-end
-
 function load(ts::TimeSpan, prof::ElecHouse)
     house = House(ts)
 
@@ -117,8 +103,10 @@ struct CHPHouse <: AbstractProfile
     env::String
     # Demand profile
     idhouse::Int
+    # Quantization
+    nbinsdem::Int
 end
-CHPHouse(;chp="chp0", heat=6., bat="", env="rt1988", idhouse=1) = CHPHouse(chp, heat, bat, env, idhouse)
+CHPHouse(;chp="chp0", heat=6., bat="", env="rt1988", idhouse=1, nbins=10) = CHPHouse(chp, heat, bat, env, idhouse, nbins)
 
 
 function load(ts::TimeSpan, prof::CHPHouse)
@@ -151,7 +139,7 @@ function load(ts::TimeSpan, prof::CHPHouse)
     join!(house, hwt, boiler)
 
     # import demands
-    wdem = Demands(10, prof.idhouse)
+    wdem = Demands(prof.nbinsdem, prof.idhouse)
     add!(house, wdem)
 
     set!(house, EDFPrice(ts))
