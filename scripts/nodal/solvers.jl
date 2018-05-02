@@ -3,23 +3,32 @@
 ################################################################################
 # Configure decomposition solvers
 ################################################################################
+using CutPruners
 
-function runsddp(pb)
+"Get initial flow by solving deterministic problem"
+function initialflow(pb, sddp)
+    _, _, u = StochDynamicProgramming.simulate(sddp, 1)
+    qind = District.getflowindex(pb)
+    return u[:, 1, qind][:]
+end
+
+function runsddp(pb; nit=30)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
-    params.max_iterations = 100
+    params.max_iterations = nit
     params.compute_ub = -1
-    sddp = @time solve_SDDP(pb, params, 2, 1)
+    params.reload = 20
+    sddp = @time solve_SDDP(pb, params, 2, 1, prunalgo=DeMatosPruningAlgo(100))
     return sddp
 end
 
 function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu=nsimu, nit=20)
+    algo     = DADP(pb, nsimu=nsimu, nit=30)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
 
-    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=50)
     return gdsc, algo
 end
 
