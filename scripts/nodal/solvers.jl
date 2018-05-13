@@ -13,13 +13,14 @@ function runsddp(pb)
     return sddp
 end
 
-function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu=nsimu, nit=20)
+function bfgs(pb; nsimu=1, nit=50, sddpit=20)
+    dpsolvers = [SDDP(20), SDDP(10), SDDP(30)]
+    algo     = DADP(pb, nsimu=nsimu, nit=sddpit, algo=dpsolvers)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
 
-    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=nit)
     return gdsc, algo
 end
 

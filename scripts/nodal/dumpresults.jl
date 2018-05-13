@@ -1,7 +1,7 @@
 
 N = District.nnodes(pb)
 FOLD = "$N-d"
-COM = ".1000"
+COM = ".500"
 
 
 ################################################################################
@@ -12,7 +12,7 @@ if ALGO == "SDDP"
     writecsv("results/nodal/$FOLD/sddp$COM/incost.csv", c)
 
 ################################################################################
-elseif ALGO == "DADP"
+elseif ALGO == "DADP"  || ALGO == "IPOPT"
 
     for (inode, n) in enumerate(pb.nodes)
         sp = algo.models[n.name]

@@ -17,7 +17,7 @@ abstract type AbstractDPSolver <: AbstractSolver end
 
 
 # TODO: improve description of SDDP
-immutable SDDP <: AbstractDPSolver
+struct SDDP <: AbstractDPSolver
     nit::Int
 end
 
