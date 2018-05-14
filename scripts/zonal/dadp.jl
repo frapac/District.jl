@@ -3,64 +3,45 @@ push!(LOAD_PATH, "..")
 using District, StochDynamicProgramming
 using Lbfgsb, Optim
 
-include("problem.jl");
+include("problem.jl")
 include("../plots/graph.jl")
+include("../utils.jl")
 
+# Initialize seed
 srand(2713)
-
-# Time span
-ts = TimeSpan(180, 1)
 # Noise discretization
 nbins = 10
-# Number of assessment in SDDP simulation
-nassess = 1
-
 # Build grid
-pb, xini = twelvehouse(nbins=nbins)
-nnodes = size(pb.nodes,1)
+grid, xini = house24(nbins=nbins)
+N = District.nnodes(grid)
+# Resampling of grid/zone model (for the SDDP model at each step of DADP)
+resample = 25
+# Maximum iteration for each algorithm
+maxiterSDDP = 15
+maxiterDADP = 20
+# Number of Monte-Carlo simulation to estimate gradient (~ estimate import flows)
+nmcsimu = 500
 
+
+## Zonal decomposition
 # Build SP problems in each node
-build!(pb, xini, PriceInterface)
-
-##################### SDDP #####
-sim = Simulator(pb, nassess, generation="reduction", nbins=10)
-params = District.get_sddp_solver()
-params.max_iterations = 20
-# Computing value functions 
-sddp = solve_SDDP(sim.model, params, 2, 1)
-
-# Simulating
-pol = District.HereAndNowDP(sddp.bellmanfunctions)
-resSDDP = District.simulate(sim, pol)
-##################### SDDP #####
+build!(grid, xini, PriceInterface)
 
 # Choosing weights for edges
-q = getflow(pb,resSDDP.controls)
-# Laplacian of incidence matrix
-laplacian =  District.getlaplacian(pb.net.A, q)
-# Get node assignments to clusters by spectral clustering
-## /!\ Cluster number hardcoded
-ncluster = 3 
-membership = spectralclustering(laplacian, ncluster)
+q = vec(readcsv("results/zonal/$N/weights/weights_1.csv"))
 
-# Build zonal grid
-pbreduced = District.reducegrid(pb, membership)
+# Decompose grid and extract zone assignation
+pb, membership = District.decomposegrid(grid, q)
 
-# Build SP problems in each zone
-District.build!(pbreduced, xini, ZoneInterface, generation="reduction", nbins=10)
-
-
-##################### DADP #####
-algo = DADP(pbreduced, nsimu=1, nit=20)
+# DADP
+# Rebuild SP problems and resampling noises from reference noises in each zone
+build!(pb, xini, ZoneInterface, generation="reduction", nbins=resample)
 
 # Initialization multiplier
-mul0 = District.getinitialmultiplier(pbreduced)
+mul0 = -District.getinitialmultiplier(pb)
+
+algo = DADP(pb, nsimu=nmcsimu, nit=maxiterSDDP)
 
 # Compute optimal multipliers and value functions
-f, grad! = District.oracle(pbreduced, algo)
-gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=20)
-
-# Simulating
-pol = District.DADPPolicy([algo.models[n.name].bellmanfunctions for n in pbreduced.nodes])
-resDADP = District.simulate(sim, pol)
-##################### DADP #####
+f, grad! = District.oracle(pb, algo)
+gdsc = @time lbfgsb(f, grad!, mul0; iprint=1, pgtol=1e-5, factr=0., maxiter=maxiterDADP)

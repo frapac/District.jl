@@ -68,19 +68,28 @@ function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
 
 end
 
-"Turns a nodal grid to a zonal grid given a clustering of the nodes"
-function reducegrid(pb::Grid, membership::Vector{Int})
-    # build zones corresponding to membership
+function decomposegrid(pb::Grid, q::Vector{T}; nclusters=6) where T <: Union{Float64, Int64}
+    # Laplacian of incidence matrix
+    laplacian =  District.getlaplacian(pb.net.A, q)
+    # Get node assignments to clusters by spectral clustering
+    ## /!\ Cluster number hardcoded
+    membership = spectralclustering(laplacian, nclusters)
+    return allocate(pb, membership)
+end
+
+"Turn a nodal grid to a zonal grid given a clustering of the nodes"
+function allocate(pb::Grid, membership::Vector{Int})
+    # Build zonal grid
     zones = getzones(pb, membership)
     # build reduced network corresponding to links between zones
     incidence = reducenetwork(pb, zones, membership)
     # update
     updatebounds!(pb, zones, incidence)
 
-    return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence))
+    return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)), membership
 end
 
-"Returns the vector containing the zones"
+"Return the vector containing the zones"
 function getzones(pb::Grid, membership::Vector{Int})
     # Zones vector
     zones = Zone[]
@@ -121,7 +130,7 @@ function getzoneorder(membership::Vector{Int})
     return zindex
 end
 
-"Returns the vector of indices of the border nodes in a zone"
+"Return the indexes of border nodes in a zone"
 function getborderindex(belongtozone::BitArray{1}, adjacencymatrix::Array{Float64})
     # number of nodes in zone
     nnodes = sum(belongtozone)
@@ -130,7 +139,7 @@ function getborderindex(belongtozone::BitArray{1}, adjacencymatrix::Array{Float6
 
     for i in 1:nnodes
         # neighbors of i
-        neigh = find(x->(x!=0), adjacencymatrix[i, :])
+        neigh = find(x->(x != 0), adjacencymatrix[i, :])
         # checking if a neighbour is out of the zone
         for j in neigh
             if !belongtozone[j]
@@ -181,8 +190,8 @@ function buildborderincidence(indexbordernodes::Array{Int64},
     return Array(incidence')
 end
 
-function updatebounds!(pb::Grid, zones::Vector{Zone},incidence::Array{Float64})
-    lastzoneindex=0
+function updatebounds!(pb::Grid, zones::Vector{Zone}, incidence::Array{Float64})
+    lastzoneindex = 0
     for zone in zones
         bounds = Tuple{Int64,Int64}[]
 
@@ -194,7 +203,7 @@ function updatebounds!(pb::Grid, zones::Vector{Zone},incidence::Array{Float64})
         end
 
         zone.bounds = bounds
-        lastzoneindex+=nbordernodes(zone)
+        lastzoneindex += nbordernodes(zone)
     end
 end
 
