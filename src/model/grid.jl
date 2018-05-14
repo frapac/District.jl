@@ -253,25 +253,6 @@ end
 # WARNING
 # Subject to curse of dimensionality (build laws in high dimension).
 # TODO: can build very large 3D arrays...
-# function buildlaws(pb::AbstractNodalGrid; nscen=100, nbins=10)
-#     # get total number of uncertainties
-#     nw = sum(nnoises.(pb.nodes))
-
-#     scenarios = zeros(Float64, ntimes(pb), nscen, nw)
-
-#     iw = 1
-
-#     for node in pb.nodes
-#         for ξ in node.noises
-#             ntw = nnoise(ξ)
-#             scenarios[:, :, iw:iw+ntw-1] = optscenarios(ξ, pb.ts, nscen)
-#             iw += ntw
-#         end
-#     end
-#     # then, we quantize vectors in `nw` dimensions
-#     return WhiteNoise(scenarios, nbins, KMeans())
-# end
-
 function buildlaws(pb::AbstractNodalGrid; nbins::Int=10)
     # Extract laws for each node
     nodesnoises = vcat([towhitenoise(node.model.noises) for node in pb.nodes]...)
@@ -285,8 +266,13 @@ When prodprocess between the noise processes is computationaly impossible, we ap
 function reducelaws(nodesnoises::Array; nbins::Int=10)
     nnodes = length(nodesnoises)
     
+    # No need to resample a node with a noise sample size equal to 10
     if nnodes == 1
         return nodesnoises[1]
+    # No need to resample a zone or a grid with two nodes
+    elseif nnodes == 2 && nbins >= 100
+        return prodprocess(nodesnoises)
+    # Resample two or three nodes to a noise sample size equal to 10
     elseif nnodes <= 3
         return resample(nodesnoises, nbins)
     else

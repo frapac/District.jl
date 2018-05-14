@@ -122,11 +122,6 @@ function show(io::IO, sim::Simulator)
     println("* Number of scenarios: ", size(sim.scenarios, 2))
 end
 
-function set!(sim::Simulator, names::Dict)
-    sim.names = names
-end
-
-
 ################################################################################
 # TODO: move Monte Carlo in another function
 """
@@ -171,9 +166,11 @@ function simulate(simulator::Simulator, policy::AbstractPolicy)
 
             # update
             # TODO
-            costs[k] += simulator.realcost(t, x, u, ξ)
-            #= m = policy.problem =#
-            #= costs[k] += getobjectivevalue(m) - getvalue(m[:alpha]) =#
+            #costs[k] += simulator.realcost(t, x, u, ξ)
+            
+            m = policy.problem 
+            #Sum over instantaneous costs only
+            costs[k] += getobjectivevalue(m) - getvalue(m[:alpha])
             stocks[t+1, k, :] = xf
             controls[t, k, :] = u
         end

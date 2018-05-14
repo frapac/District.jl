@@ -67,14 +67,22 @@ function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
 end
 
 "Turns a nodal grid to a zonal grid given a clustering of the nodes"
-function reducegrid(pb::Grid, membership::Vector{Int})
+function decomposegrid(pb::Grid, q::Vector)
+    # Laplacian of incidence matrix
+    laplacian =  District.getlaplacian(pb.net.A, q)
+    # Get node assignments to clusters by spectral clustering
+    ## /!\ Cluster number hardcoded
+    ncluster = 6 
+    membership = spectralclustering(laplacian, ncluster)
+
+    # Build zonal grid
     zones = getzones(pb, membership)
 
     incidence = reducenetwork(pb, zones, membership)
 
     updatebounds!(pb,zones,incidence)
 
-    return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)) 
+    return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)), membership
 end
     
 "Returns the vector containing the zones"
@@ -127,7 +135,7 @@ function getborderindex(belongtozone::BitArray{1}, adjacencymatrix::Array{Float6
 
     for i in 1:nnodes
         # neighbors of i
-        neigh = find(x->(x!=0), adjacencymatrix[i, :])
+        neigh = find(x->(x != 0), adjacencymatrix[i, :])
         # checking if a neighbour is out of the zone
         for j in neigh
             if !belongtozone[j]
