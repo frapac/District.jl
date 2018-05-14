@@ -19,11 +19,6 @@ pb, xini = twelvehouse(nbins=nbins)
 
 nnodes = length(pb.nodes)
 
-# The first two houses are in zone 1, the third in zone 2
-membership = vec([1 1 1 3 3 3 3 3 3 2 2 2])
-# We fill zone 1 and zone 2
-pbreduced = District.reducegrid(pb, membership)
-zones = pbreduced.nodes
 
 @testset "Zone" begin
     nbins = 1
@@ -35,7 +30,7 @@ zones = pbreduced.nodes
     # The first two houses are in zone 1, the third in zone 2
     membership = vec([1 1 1 3 3 3 3 3 3 2 2 2])
     # We fill zone 1 and zone 2
-    pbreduced = District.reducegrid(pb, membership)
+    pbreduced = District.allocate(pb, membership)[1]
     zones = pbreduced.nodes
     # Test zone assignment
     # Number of zones
@@ -48,6 +43,4 @@ zones = pbreduced.nodes
     @test size(zones[1].net.A,2) == 3 && size(zones[2].net.A,2) == 7 && size(zones[3].net.A,2) == 2
     # Number of arcs in zonal grid
     @test size(pbreduced.net.A, 2) == 4
-
 end
-

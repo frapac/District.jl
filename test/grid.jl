@@ -99,7 +99,7 @@ end
     @testset "Global problem" begin
         # build global sp model
         for nbins in [1, 10]
-            sp = District.getproblem(pb, DiscreteLawSampler(nbins, 5, 1))
+            sp = District.getproblem(pb, DiscreteLawSampler(nbins, 5, Δn=1))
             @test isa(sp, StochDynamicProgramming.SPModel)
             @test sp.noises[1].supportSize == nbins
         end
@@ -108,12 +108,12 @@ end
     @testset "Simulation" begin
         nassess = 1
         nbins = 20
-        sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, 1))
+        sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, Δn=1))
         @test isa(sim, Simulator)
         @test sim.model.noises[1].supportSize == nbins
 
         for Samples in [OutSampleScenarios, InSampleScenarios]
-            sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, 1), gen=Samples())
+            sim = Simulator(pb, nassess, sampler=DiscreteLawSampler(nbins, 5, Δn=1), gen=Samples())
             @test isa(sim, Simulator)
             @test sim.model.noises[1].supportSize == nbins
         end
