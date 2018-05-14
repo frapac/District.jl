@@ -12,23 +12,23 @@ function initialflow(pb, sddp)
     return u[:, 1, qind][:]
 end
 
-function runsddp(pb; nit=30)
+function runsddp(pb; nit=30, ncuts=100)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
     params.max_iterations = nit
     params.compute_ub = -1
     params.reload = 20
-    sddp = @time solve_SDDP(pb, params, 2, 1, prunalgo=DeMatosPruningAlgo(100))
+    sddp = @time solve_SDDP(pb, params, 2, 1, prunalgo=DeMatosPruningAlgo(ncuts))
     return sddp
 end
 
-function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu=nsimu, nit=30)
+function bfgs(pb; nsimu=1, sddpit=30, nit=50)
+    algo     = DADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
 
-    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=50)
+    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=nit)
     return gdsc, algo
 end
 
