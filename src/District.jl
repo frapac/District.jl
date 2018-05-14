@@ -11,6 +11,7 @@ module District
 using JLD
 using JuMP
 using Scenarios, StochDynamicProgramming
+using Clustering
 using JSON, ProgressMeter, MacroTools
 
 
@@ -64,6 +65,7 @@ include("algo/sddp.jl")
 # dadp solvers
 include("algo/dadp.jl")
 include("algo/padp.jl")
+include("algo/qadp.jl")
 include("algo/madp.jl")
 include("algo/admm.jl")
 # Spectral clustering algorithm

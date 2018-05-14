@@ -8,7 +8,7 @@ srand(10)
 ALGO = "SDDP"
 
 # load time span
-ts = TimeSpan(180, 1)
+ts = TimeSpan(150, 1)
 
 ################################################################################
 # BUILDING MODEL
@@ -17,7 +17,7 @@ prof = District.ElecHouse(pv=20, heat=6, bat="bat0")
 house = District.load(ts, prof)
 
 # initial position
-x0 = [.55, 2., 16., 16.]
+x0 = [.55, 2., 18., 18.]
 # build SP model
 District.build!(house, x0)
 
@@ -33,7 +33,7 @@ if ALGO == "MPC"
     pol = District.MPCPolicy(District.genforecast(ts, house.noises))
 elseif ALGO == "SDDP"
     # Compute cuts :
-    sddp = @time District.solve(house, SDDP(100))
+    sddp = @time District.solve(house, SDDP(200))
     pol = District.HereAndNowDP(sddp.bellmanfunctions)
 end
 

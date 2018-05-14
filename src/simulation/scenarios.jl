@@ -5,9 +5,24 @@
 ################################################################################
 
 
+export InSampleScenarios, OutSampleScenarios
+
 ################################################################################
 # ASSESSMENT SCENARIOS
 ################################################################################
+abstract type AbstractScenarioGenerator end
+
+struct OutSampleScenarios <: AbstractScenarioGenerator
+    shuffle::Bool
+    seed::Int
+end
+OutSampleScenarios(;shuffle=true, seed=-1) = OutSampleScenarios(shuffle, seed)
+
+struct InSampleScenarios <: AbstractScenarioGenerator
+    seed::Int
+end
+InSampleScenarios(;seed=-1) = InSampleScenarios(seed)
+
 
 """
     genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int)
@@ -24,7 +39,8 @@ Generate `nscen` assessment scenarios for uncertainties in Grid `pb`.
 """
 function genassessments end
 
-function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int)
+# TODO: add shuffling
+function genassessments(ts::AbstractTimeSpan, noises::Vector{AbstractUncertainty}, nscen::Int, shuffle=false)
     # get noises dimensions
     nnoises = sum(nnoise.(noises))
     # allocate assessments
@@ -41,6 +57,8 @@ end
 
 # overload to generate assessment scenarios directly with node
 genassessments(node::AbstractNode, nscen::Int) = genassessments(node.time, node.noises, nscen)
+generate(gen::OutSampleScenarios, pb::AbstractGrid, nscen::Int) = genassessments(pb, nscen, shuff=gen.shuffle)
+generate(gen::OutSampleScenarios, node::AbstractNode, nscen::Int) = genassessments(node, nscen)
 
 function genassessments(pb::Grid, nscen::Int; shuff=true)
     # get total number of uncertainties
@@ -67,6 +85,8 @@ end
 function genscen(model::StochDynamicProgramming.SPModel, nscen::Int)
     StochDynamicProgramming.simulate_scenarios(model.noises, nscen)
 end
+genscen(n::AbstractNode, nscen) = genscen(n.model, nscen)
+
 function genscen(pb::Grid, nscen::Int)
     # get total number of uncertainties
     nw = sum(nnoises.(pb.nodes))
@@ -82,6 +102,8 @@ function genscen(pb::Grid, nscen::Int)
 
 end
 
+generate(gen::InSampleScenarios, pb::AbstractGrid, nscen::Int) = genscen(pb, nscen)
+generate(gen::InSampleScenarios, node::AbstractNode, nscen::Int) = genscen(node, nscen)
 
 ################################################################################
 # FORECASTING

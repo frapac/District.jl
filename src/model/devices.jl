@@ -11,7 +11,7 @@
 ################################################################################
 
 export Battery, ElecHotWaterTank, MicroCHP, R6C2, ElecHeater, ThermalHotWaterTank,
-       ThermalHeater
+       ThermalHeater, Burner
 export GraphConnection
 
 ##################################################
@@ -494,6 +494,25 @@ ncontrols(chp::MicroCHP) = 1
 xbounds(chp::MicroCHP) = Tuple{Float64, Float64}[]
 ubounds(chp::MicroCHP) = Tuple{Float64, Float64}[(0., 1.)]
 getname(chp::MicroCHP) = "μCHP"
+
+# burner
+struct Burner <: AbstractDevice
+    name::String
+    # max gas power
+    power::Float64
+    # thermal yield
+    yield::Float64
+end
+Burner(power; yield=.9) = Burner("burner", power, yield)
+parsedevice(burner::Burner, xindex::Int, uindex::Int, dt, p::Dict=Dict()) = Expr[]
+thermalload(burner::Burner, uindex::Int) = :(u[$uindex]*$(burner.yield))
+gasload(burner::Burner, uindex::Int) = :(u[$uindex])
+nstates(burner::Burner) = 0
+ncontrols(burner::Burner) = 1
+xbounds(burner::Burner) = Tuple{Float64, Float64}[]
+ubounds(burner::Burner) = Tuple{Float64, Float64}[(0., burner.power)]
+getname(burner::Burner) = "Burner"
+
 
 
 

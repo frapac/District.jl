@@ -27,7 +27,7 @@ Grid(ts::AbstractTimeSpan) = Grid(ts, AbstractNode[], NoneNetwork())
 nnodes(pb::AbstractNodalGrid) = length(pb.nodes)
 narcs(pb::AbstractGrid) = pb.net.narcs
 ntimes(pb::AbstractGrid) = ntimesteps(pb.ts)
-ninjection(pb::Grid) = 0 
+ninjection(pb::Grid) = 0
 
 
 # Build models inside `grid` for decomposition
@@ -96,7 +96,7 @@ end
 ################################################################################
 initpos(pb::AbstractNodalGrid) = vcat([h.model.initialState for h in pb.nodes]...)
 
-function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, noptscen=100)
+function getproblem(pb::AbstractNodalGrid, sampler::DiscreteLawSampler)
     # to avoid world age problem, we rebuild elecload and gasload
     # right now.
     uindex = 1
@@ -131,12 +131,7 @@ function getproblem(pb::AbstractNodalGrid, generation="reduction", nbins=10, nop
     # build coupling constraint Aq+f, modeling graph topology
     constr = buildconstr(pb)
     # build global noise laws (warning: |WW| may be very large)
-    if generation == "reduction"
-        laws = buildlaws(pb, nbins=nbins)
-    elseif generation == "total"
-        # warning: usually intractable!!
-        laws = Scenarios.prodprocess([towhitenoise(n.model.noises) for n in pb.nodes])
-    end
+    laws = sampler([towhitenoise(n.model.noises) for n in pb.nodes])
 
     spmodel = StochDynamicProgramming.LinearSPModel(ntimes(pb), ub,
                                                   x0, costm,
@@ -216,8 +211,8 @@ function buildcost(pb::AbstractNodalGrid)
         @constraint(m, qp .>= -u[end-ninj-na+1:end-ninj])
         # add transportation cost to cost
         cost += pb.net.k1*sum(qp) + pb.net.k2 * dot(qp, qp)
-        
-        # Zone connection cost        
+
+        # Zone connection cost
         if ninj > 0
             cost += objective(pb)(m, t, x, u, w)
         end
@@ -230,7 +225,7 @@ end
 # remember: flow is last control in each node (u[end]) so its position
 # is ncontrols
 getflowindex(pb::AbstractNodalGrid) = cumsum(ncontrols.(pb.nodes))
-    
+
 
 # Build coupling constraint Aq + F for a grid.
 function buildconstr(pb::AbstractNodalGrid)
@@ -245,53 +240,8 @@ function buildconstr(pb::AbstractNodalGrid)
             cstr += pb.conn.linker * u[end-ninj+1:end]
         end
         return cstr
-    end 
-    return constr
-end
-
-# Build probability laws for grid `pb`.
-# WARNING
-# Subject to curse of dimensionality (build laws in high dimension).
-# TODO: can build very large 3D arrays...
-function buildlaws(pb::AbstractNodalGrid; nbins::Int=10)
-    # Extract laws for each node
-    nodesnoises = vcat([towhitenoise(node.model.noises) for node in pb.nodes]...)
-
-    return reducelaws(nodesnoises, nbins=nbins)
-end
-
-"Reduction of vector of noise processes.
-
-When prodprocess between the noise processes is computationaly impossible, we apply a recursive three-by-three reduction by applying a k-means algorithm."
-function reducelaws(nodesnoises::Array; nbins::Int=10)
-    nnodes = length(nodesnoises)
-    
-    # No need to resample a node with a noise sample size equal to 10
-    if nnodes == 1
-        return nodesnoises[1]
-    # No need to resample a zone or a grid with two nodes
-    elseif nnodes == 2 && nbins >= 100
-        return prodprocess(nodesnoises)
-    # Resample two or three nodes to a noise sample size equal to 10
-    elseif nnodes <= 3
-        return resample(nodesnoises, nbins)
-    else
-        #We split the nodes in three almost-equal parts
-        newsize = Int(floor(nnodes/3))
-        
-        nodesnoises1 = nodesnoises[1:newsize]
-        nodesnoises2 = nodesnoises[(newsize+1):(2*newsize)]
-        nodesnoises3 = nodesnoises[(2*newsize+1):end]
-
-        globallaw1 = reducelaws(nodesnoises1, nbins=10)
-        globallaw2 = reducelaws(nodesnoises2, nbins=10)
-        globallaw3 = reducelaws(nodesnoises3, nbins=10)
-
-        newnodesnoises = vcat([globallaw1, globallaw2, globallaw3]...)
-
-        return resample(newnodesnoises, nbins)
-
     end
+    return constr
 end
 
 # Build real cost

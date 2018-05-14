@@ -30,6 +30,10 @@ immutable OutdoorTemperature <: AbstractWeatherData end
 # Convert Kelvin to Celsius Degree
 loadweather(::OutdoorTemperature, ts::AbstractTimeSpan) = loaddata(ts, 1) - 273.15
 
+immutable Humidity <: AbstractWeatherData end
+loadweather(::Humidity, ts::AbstractTimeSpan) = loaddata(ts, 2)
+
+### HORIZONTAL RADIATION ###
 # Beam horizontal
 immutable BHI <: AbstractWeatherData end
 loadweather(::BHI, ts::AbstractTimeSpan) = loaddata(ts, 10)
@@ -38,6 +42,15 @@ loadweather(::BHI, ts::AbstractTimeSpan) = loaddata(ts, 10)
 immutable DHI <: AbstractWeatherData end
 loadweather(::DHI, ts::AbstractTimeSpan) = loaddata(ts, 11)
 
+# Global horizontal
+immutable GHI <: AbstractWeatherData end
+loadweather(::GHI, ts::AbstractTimeSpan) = loaddata(ts, 12)
+
+# Clear sky GHI
+immutable ClearSkiGHI <: AbstractWeatherData end
+loadweather(::ClearSkiGHI, ts::AbstractTimeSpan) = 4*loaddata(ts, 14)
+
+### TILTED RADIATION ###
 # Global tilted
 immutable GTI <: AbstractWeatherData end
 loadweather(::GTI, ts::AbstractTimeSpan) = loaddata(ts, 9)

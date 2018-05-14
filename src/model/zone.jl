@@ -23,6 +23,20 @@ mutable struct Zone <: AbstractNodalGrid
     # SP model
     model
 end
+function Zone(ts::AbstractTimeSpan,
+              nodes::Vector{AbstractNode},
+              borderindex::Vector{Int64},
+              net::AbstractNetwork)
+    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(), Tuple{Int64,Int64}[], nothing)
+end
+nbordernodes(pb::Zone) = length(pb.borderindex)
+connectionsize(pb::Zone) = (ntimes(pb) - 1) * nbordernodes(pb)
+ninjection(pb::Zone) = nbordernodes(pb)
+swap!(zone::Zone, exch::Vector{Float64}) = swap!(zone.conn, exch)
+
+
+###
+# Definition of zonal grid
 
 struct ZonalGrid <: AbstractGrid
     # Time span
@@ -32,22 +46,10 @@ struct ZonalGrid <: AbstractGrid
     # Edges
     net::AbstractNetwork
 end
-
-function Zone(ts::AbstractTimeSpan,
-    nodes::Vector{AbstractNode},
-    borderindex::Vector{Int64},
-    net::AbstractNetwork)
-    Zone(gensym(), ts, nodes, borderindex, net, NoneInterface(),Tuple{Int64,Int64}[],nothing)
-end
-
-nbordernodes(pb::Zone) = length(pb.borderindex)
 nnodes(pb::ZonalGrid) = sum(nbordernodes.([zone for zone in pb.nodes]))
-connectionsize(pb::Zone) = (ntimes(pb) - 1) * nbordernodes(pb)
-ninjection(pb::Zone) = nbordernodes(pb)
-swap!(zone::Zone, exch::Vector{Float64}) = swap!(zone.conn, exch)
 
 function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
-                maxflow=6., tau=1., generation="reduction",nbins=10)
+                maxflow=6., tau=1., generation="reduction", nbins=10)
     for zone in grid.nodes
         price = zeros(Float64, connectionsize(zone))
         linker = zeros(Int64, nnodes(zone), nbordernodes(zone))
@@ -66,26 +68,26 @@ function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
 
 end
 
-"Turns a nodal grid to a zonal grid given a clustering of the nodes"
+"Turn a nodal grid to a zonal grid given a clustering of the nodes"
 function decomposegrid(pb::Grid, q::Vector)
     # Laplacian of incidence matrix
     laplacian =  District.getlaplacian(pb.net.A, q)
     # Get node assignments to clusters by spectral clustering
     ## /!\ Cluster number hardcoded
-    ncluster = 6 
+    ncluster = 6
     membership = spectralclustering(laplacian, ncluster)
 
     # Build zonal grid
     zones = getzones(pb, membership)
-
+    # build reduced network corresponding to links between zones
     incidence = reducenetwork(pb, zones, membership)
-
-    updatebounds!(pb,zones,incidence)
+    # update
+    updatebounds!(pb, zones, incidence)
 
     return ZonalGrid(pb.ts, zones, Network(pb.ts, incidence)), membership
 end
-    
-"Returns the vector containing the zones"
+
+"Return the vector containing the zones"
 function getzones(pb::Grid, membership::Vector{Int})
     # Zones vector
     zones = Zone[]
@@ -106,7 +108,7 @@ function getzones(pb::Grid, membership::Vector{Int})
         # Adjacency matrix of the zone
         zoneadjmat = adjacencymatrix[ belongtozone, belongtozone ]
         # Build incidence matrix of the zone
-        A, tmp = buildincidence(zoneadjmat)
+        A, _ = buildincidence(zoneadjmat)
 
         push!(zones, Zone(pb.ts, zonenode, borderindex, Network(pb.ts, A)))
     end
@@ -154,24 +156,25 @@ function reducenetwork(pb::Grid, zones::Vector{Zone}, membership::Vector{Int})
     # Index of border nodes
     indexbordernodes = Int64[]
     lastzoneindex=0
-    
+
     for zone in zones
         indexbordernodes = vcat(indexbordernodes, lastzoneindex + zone.borderindex)
         lastzoneindex += nnodes(zone)
     end
     connexion = adjacencymatrix[ indexbordernodes , indexbordernodes ]
-    
     incidence = buildborderincidence(indexbordernodes, connexion, membership)
 
     return incidence
 end
 
-function buildborderincidence(indexbordernodes::Array{Int64}, connexion::Array{Float64}, membership::Vector{Int})
+function buildborderincidence(indexbordernodes::Array{Int64},
+                              connexion::Array{Float64}, membership::Vector{Int})
     nbordernodes = length(indexbordernodes)
-    # Reduced incidence matrix 
+    # Reduced incidence matrix
     incidence = Float64[]
 
-    # /!\ : We cannot use the function buildincidence because we don't want edges between the border nodes of a same zone to appear 
+    # /!\ : We cannot use the function buildincidence because we don't want
+    # edges between the border nodes of a same zone to appear
     for i in 1:nbordernodes-1
         for j in i+1:nbordernodes
             if (membership[ indexbordernodes[i] ] != membership[ indexbordernodes[j] ]) &&  (connexion[i, j] == 1)

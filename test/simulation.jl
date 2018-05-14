@@ -43,4 +43,10 @@ srand(2713)
         @test .25*mean(res.costs) ≈ vals  atol=1e-4
         println(res)
     end
+
+    # test scenarios generator
+    for gen in [InSampleScenarios(), OutSampleScenarios()]
+        sim = Simulator(house, nscen, gen)
+        @test size(sim.scenarios, 2) == nscen
+    end
 end
