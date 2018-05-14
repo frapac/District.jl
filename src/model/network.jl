@@ -97,7 +97,7 @@ function buildincidence(connexion::Array{Float64})
 end
 
 "Get laplacian matrix of node-arc incidence matrix `A` with weight q."
-function getlaplacian(A::Array{Float64, 2}, q::Array{Float64, 1})
+function getlaplacian(A::Array{Float64, 2}, q::Vector{T}) where T <: Real
     return A * diagm(q) * A'
 end
 
