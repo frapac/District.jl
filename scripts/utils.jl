@@ -47,3 +47,19 @@ function addmax(ex)
     end
     eval(code)
 end
+
+function recursivesampling(laws, sampler::DiscreteLawSampler, nbins, Δn)
+    nwindows = ceil(Int, length(laws) / Δn)
+    μtot = WhiteNoise[]
+
+    ## we resample the noise sequentially
+    i0, i1 = 1, Δn
+    for nw in 1:nwindows
+        μ = sampler(laws[i0:i1])
+        push!(μtot, μ)
+        i0 += Δn
+        i1 = min(i1+Δn, length(laws))
+    end
+
+    return resample(μtot, nbins)
+end

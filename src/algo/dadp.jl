@@ -75,7 +75,7 @@ mutable struct DADP <: AbstractDecompositionSolver
     # current flow in edges
     Q::Array{Float64}
     # solver to solve nodes subproblems
-    algo::AbstractDPSolver
+    dpsolver::Vector{AbstractDPSolver}
     # Scenario
     scen::Array
     # number of Monte Carlo simulations to estimate gradient
@@ -113,7 +113,11 @@ function DADP(pb::AbstractGrid; nsimu=100, nit=10, algo=SDDP(nit))
     # initiate mod with empty dictionnary
     mod = Dict()
 
-    DADP(ntime, Inf, F, Q, algo, scen, nsimu, nit, mod)
+    # we consider one solver / node. If we have a unique
+    # solver specified, we duplicate it
+    algos = isa(algo, Vector)? algo : [algo for i in 1:nbnodes]
+
+    DADP(ntime, Inf, F, Q, algos, scen, nsimu, nit, mod)
 end
 
 function getinitialmultiplier(pb::AbstractGrid)
@@ -135,8 +139,8 @@ end
 
 function solve!(pb::AbstractGrid, dadp::DADP)
     # solve production subproblems
-    for d in pb.nodes
-        dadp.models[d.name] = solve(d, dadp.algo)
+    for (nd, d) in enumerate(pb.nodes)
+        dadp.models[d.name] = solve(d, dadp.dpsolver[nd])
     end
     # solve transport problem
     solve!(pb.net)

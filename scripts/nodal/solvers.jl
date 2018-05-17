@@ -3,23 +3,32 @@
 ################################################################################
 # Configure decomposition solvers
 ################################################################################
+using CutPruners
 
-function runsddp(pb)
+"Get initial flow by solving deterministic problem"
+function initialflow(pb, sddp)
+    _, _, u = StochDynamicProgramming.simulate(sddp, 1)
+    qind = District.getflowindex(pb)
+    return u[:, 1, qind][:]
+end
+
+function runsddp(pb; nit=30, ncuts=100)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
-    params.max_iterations = 100
+    params.max_iterations = nit
     params.compute_ub = -1
-    sddp = @time solve_SDDP(pb, params, 2, 1)
+    params.reload = 20
+    sddp = @time solve_SDDP(pb, params, 2, 1, prunalgo=DeMatosPruningAlgo(ncuts))
     return sddp
 end
 
-function bfgs(pb; nsimu=1)
-    algo     = DADP(pb, nsimu=nsimu, nit=20)
+function bfgs(pb; nsimu=1, sddpit=30, nit=50)
+    algo     = DADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
     p = EDFPrice(pb.ts).price[1:end-1]
     x0 = repmat(p, District.nnodes(pb))
 
-    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=40)
+    gdsc = @time lbfgsb(f, grad!, x0; iprint=1, pgtol=1e-5, factr=0., maxiter=nit)
     return gdsc, algo
 end
 
@@ -35,10 +44,10 @@ function qadp(pb; nsimu=1)
     return gdsc, algo
 end
 
-function ipopt(pb; nsimu=1)
-    algo     = DADP(pb, nsimu=nsimu, nit=10)
+function ipopt(pb; nsimu=1, sddpit=30, nit=10)
+    algo     = DADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
-    nx       = size(A, 1) * 95
+    nx       = size(pb.net.A, 1) * 95
     xL       = zeros(Float64, nx)
     xU       = ones(Float64, nx)
 
@@ -46,18 +55,22 @@ function ipopt(pb; nsimu=1)
     eval_jac_g(x, mode, rows, cols, values ) = nothing
     prob = createProblem(nx, xL, xU, 0, Float64[], Float64[], 0, 0, f, eval_g, grad!, eval_jac_g)
 
-    p = EDFPrice(ts).price[1:end-1]
-    prob.x = repmat(p, District.nnodes(pb))
+    p = EDFPrice(pb.ts).price[1:end-1]
+    x0 = repmat(p, District.nnodes(pb))
 
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 15)
+    addOption(prob, "max_iter", nit)
+    vals = Float64[]
+    histmul = Float64[]
+    addtrace(pb, prob, vals, histmul)
+
     @time solveProblem(prob)
-    return prob, algo
+    return prob, algo, vals, histmul
 end
 
-function quantdec(pb; nsimu=1)
-    algo     = PADP(pb, nsimu=nsimu, nit=20)
+function quantdec(pb; nsimu=1, sddpit=20, nit=20)
+    algo     = PADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
     nnodes   = District.nnodes(pb)
     ntime    = District.ntimes(pb) - 1
@@ -92,16 +105,17 @@ function quantdec(pb; nsimu=1)
     prob.x = zeros(Float64, nx)
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
-    addOption(prob, "max_iter", 20)
-
-    @time solveProblem(prob)
-    return prob, algo
-end
-
-function addtrace()
-    # a dirty solution to recover evolution of multipliers along iterations
+    addOption(prob, "max_iter", nit)
     vals = Float64[]
     histmul = Float64[]
+    addtrace(pb, prob, vals, histmul)
+
+    @time solveProblem(prob)
+    return prob, algo, vals, histmul
+end
+
+function addtrace(pb, prob, vals, histmul)
+    # a dirty solution to recover evolution of multipliers along iterations
     function intermediate(alg_mod::Int,
                           iter_count::Int,
                           obj_value::Float64,
@@ -111,7 +125,7 @@ function addtrace()
                           alpha_du::Float64, alpha_pr::Float64,
                           ls_trials::Int)
         push!(vals, obj_value)
-        push!(histmul, h1.conn.values...)
+        push!(histmul, pb.nodes[1].conn.values...)
         return true  # Keep going
     end
     setIntermediateCallback(prob, intermediate)
