@@ -5,6 +5,7 @@
 ################################################################################
 using CutPruners
 
+################################################################################
 "Get initial flow by solving deterministic problem"
 function initialflow(pb, sddp)
     _, _, u = StochDynamicProgramming.simulate(sddp, 1)
@@ -12,6 +13,7 @@ function initialflow(pb, sddp)
     return u[:, 1, qind][:]
 end
 
+################################################################################
 function runsddp(pb; nit=30, ncuts=100)
     # TODO: currently we have to define sim before calling DADP to avoid side effect
     params = District.get_sddp_solver()
@@ -22,6 +24,7 @@ function runsddp(pb; nit=30, ncuts=100)
     return sddp
 end
 
+################################################################################
 function bfgs(pb; nsimu=1, sddpit=30, nit=50)
     algo     = DADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
@@ -32,6 +35,7 @@ function bfgs(pb; nsimu=1, sddpit=30, nit=50)
     return gdsc, algo
 end
 
+################################################################################
 function qadp(pb; nsimu=1)
     algo    = QADP(pb, nsimu=nsimu, nit=20)
     f, grad! = District.oracle(pb, algo)
@@ -44,6 +48,7 @@ function qadp(pb; nsimu=1)
     return gdsc, algo
 end
 
+################################################################################
 function ipopt(pb; nsimu=1, sddpit=30, nit=10)
     algo     = DADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
@@ -69,7 +74,8 @@ function ipopt(pb; nsimu=1, sddpit=30, nit=10)
     return prob, algo, vals, histmul
 end
 
-function quantdec(pb; nsimu=1, sddpit=20, nit=20)
+################################################################################
+function quantdec(pb; nsimu=1, sddpit=20, nit=20, trace=false)
     algo     = PADP(pb, nsimu=nsimu, nit=sddpit)
     f, grad! = District.oracle(pb, algo)
     nnodes   = District.nnodes(pb)
@@ -102,20 +108,31 @@ function quantdec(pb; nsimu=1, sddpit=20, nit=20)
     gUB  = zeros(Float64, ntime)
     prob = createProblem(nx, xL, xU, ntime, gLB, gUB, nx, 0,
                          f, eval_g, grad!, eval_jac_g)
+    # set initial position
     prob.x = zeros(Float64, nx)
+
+    # set IPOPT option
     addOption(prob, "hessian_approximation", "limited-memory")
     addOption(prob, "max_soc", 0)
     addOption(prob, "max_iter", nit)
+    addOption(prob, "acceptable_tol", .05)
+    addOption(prob, "acceptable_iter", 3)
+    addOption(prob, "acceptable_obj_change_tol", .05)
+    addOption(prob, "acceptable_dual_inf_tol", 5.)
+
+    # define trace variables
     vals = Float64[]
     histmul = Float64[]
-    addtrace(pb, prob, vals, histmul)
+    trace && addtrace(pb, prob, vals, histmul)
 
     @time solveProblem(prob)
     return prob, algo, vals, histmul
 end
 
+################################################################################
 function addtrace(pb, prob, vals, histmul)
     # a dirty solution to recover evolution of multipliers along iterations
+    objbuckets = Float64[]
     function intermediate(alg_mod::Int,
                           iter_count::Int,
                           obj_value::Float64,
@@ -124,9 +141,11 @@ function addtrace(pb, prob, vals, histmul)
                           regularization_size::Float64,
                           alpha_du::Float64, alpha_pr::Float64,
                           ls_trials::Int)
+        push!(objbuckets, obj_value)
         push!(vals, obj_value)
         push!(histmul, pb.nodes[1].conn.values...)
-        return true  # Keep going
+        last_value = (iter_count > 3)? objbuckets[end-2] : Inf
+        return last_value - obj_value > 0.02
     end
     setIntermediateCallback(prob, intermediate)
 end
