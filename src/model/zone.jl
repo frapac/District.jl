@@ -63,14 +63,14 @@ function build!(grid::ZonalGrid, xini::Dict, Interface::Type=ZoneInterface;
         conn = Interface(price, linker)
         build!(zone, xini, PriceInterface)
         zone.conn = conn
-        zone.model = getproblem(zone, generation, nbins)
+        zone.model = getproblem(zone, DiscreteLawSampler(nbins, 100, Δn=3))
     end
 
 end
 
 function decomposegrid(pb::Grid, q::Vector{T}; nclusters=6) where T <: Union{Float64, Int64}
     # Laplacian of incidence matrix
-    laplacian =  District.getlaplacian(pb.net.A, q)
+    laplacian = getlaplacian(pb.net.A, q)
     # Get node assignments to clusters by spectral clustering
     ## /!\ Cluster number hardcoded
     membership = spectralclustering(laplacian, nclusters)

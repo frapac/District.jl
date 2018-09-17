@@ -17,13 +17,13 @@ ALGO = "DADP"
 srand(2713)
 
 # Build problem
-pb, xini = house48(nbins=10)
+pb, xini = twelvehouse(nbins=10)
 # Get number of nodes
 N = District.nnodes(pb)
 # Build SP model inside nodes
 build!(pb, xini, PriceInterface, maxflow=6.)
 # Build corresponding simulator
-sim = Simulator(pb, 5000,
+sim = Simulator(pb, 100,
                 sampler=DiscreteLawSampler(1, 1, Δn=1),
                 gen=InSampleScenarios())
 

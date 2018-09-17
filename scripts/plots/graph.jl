@@ -2,15 +2,15 @@
 include("stress.jl")
 
 hasbattery(node::House) = District.hasdevice(node, Battery)
-haspv(node::House) = District.hasnoise(node, PVProduction)
+hassolar(node::House) = District.hasnoise(node, PVProduction)
 
 function getshape(pb::Grid)
     shapes = String[]
     for d in pb.nodes
-        if hasbattery(d) && haspv(d)
-            push!(shapes, "red")
-        elseif haspv(d)
-            push!(shapes, "green")
+        if hasbattery(d)
+            push!(shapes, "darkcyan")
+        elseif hassolar(d)
+            push!(shapes, "yellowgreen")
         else
             push!(shapes, "black")
         end
@@ -29,7 +29,7 @@ end
 function plotgraph(A)
     srand(11)
     figure()
-    
+
     nnodes, narcs = size(A)
     adjmat = District.getadjacence(A)
     posx, posy = layout_spring_adj(adjmat)
@@ -68,7 +68,7 @@ function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
         end
 
         α = abs(q[edge] / qmax)
-        plot([posx[i], posx[j]], [posy[i], posy[j]], c=(α, 0., 1- α), lw=10*α, zorder=1)
+        plot([posx[i], posx[j]], [posy[i], posy[j]], c="darkblue", lw=10*α, zorder=1)
 
         if darrow
             # start position
@@ -92,7 +92,7 @@ function plotflow(A, q; darrow=false, offsetx=.12, offsety=.05)
                   head_width=0.03, head_length=0.05, fc="k")
         end
     end
-    
+
     scatter(posx, posy, s=150, color=getshape(pb), zorder=2)
 
     axis("off")

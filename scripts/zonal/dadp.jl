@@ -3,7 +3,7 @@ push!(LOAD_PATH, "..")
 using District, StochDynamicProgramming
 using Lbfgsb, Optim
 
-include("problem.jl")
+include("../nodal/harsh.jl")
 include("../plots/graph.jl")
 include("../utils.jl")
 
@@ -12,12 +12,12 @@ srand(2713)
 # Noise discretization
 nbins = 10
 # Build grid
-grid, xini = house24(nbins=nbins)
+grid, xini = twelvehouse(nbins=nbins)
 N = District.nnodes(grid)
 # Resampling of grid/zone model (for the SDDP model at each step of DADP)
-resample = 25
+resample = 5
 # Maximum iteration for each algorithm
-maxiterSDDP = 15
+maxiterSDDP = 60
 maxiterDADP = 20
 # Number of Monte-Carlo simulation to estimate gradient (~ estimate import flows)
 nmcsimu = 500
@@ -28,10 +28,10 @@ nmcsimu = 500
 build!(grid, xini, PriceInterface)
 
 # Choosing weights for edges
-q = vec(readcsv("results/zonal/$N/weights/weights_1.csv"))
+q = vec(readcsv("results/zonal/$N/flows.csv"))
 
 # Decompose grid and extract zone assignation
-pb, membership = District.decomposegrid(grid, q)
+pb, membership = District.decomposegrid(grid, q, nclusters=4)
 
 # DADP
 # Rebuild SP problems and resampling noises from reference noises in each zone
