@@ -37,7 +37,12 @@ using Gurobi
 #                                 CPX_PARAM_QPMETHOD=2
 #                                )
 "Get LP solver."
-get_solver() = Gurobi.GurobiSolver(OutputFlag=false, Method=0, MIPGap=.01, Threads=1, TimeLimit=1)
+get_solver() = Gurobi.GurobiSolver(OutputFlag=false,
+                                   Method=0,
+                                   MIPGap=.01,
+                                   Threads=1,
+                                   TimeLimit=1
+                                   )
 
 
 "Get StochDynamicProgramming SDDP solver."

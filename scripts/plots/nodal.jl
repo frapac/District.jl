@@ -3,7 +3,7 @@ using PyPlot, StatsBase, PyCall
 # use seaborn to prettify plots
 @pyimport seaborn
 # path for results
-const NNODES = "3-d"
+const NNODES = "12-d"
 const PATH_DATA = "results/nodal/$NNODES"
 COM = ".500"
 
@@ -50,40 +50,85 @@ end
 
 
 # DADP
-if true
+if false
     figure()
     λ = readcsv("$PATH_DATA/dadp$COM/1-values.csv")
     nhours = size(λ, 1)/ 4
     xtime = vec(0:.25:nhours)[1:end-1]
+
+    haspv = [3, 5, 9, 11]
+    hasbat = [1, 4, 7, 10]
     for i in 1:3
         λ = readcsv("$PATH_DATA/dadp$COM/$i-values.csv")
-        plot(xtime, λ, label="Node $i")
+        if i in hasbat
+            plot(xtime, λ, label="Battery", c="darkcyan")
+        elseif i in haspv
+            plot(xtime, λ, label="PV", c="yellowgreen")
+        else
+            plot(xtime, λ, label="None", c="k")
+        end
     end
+
+    for i in 4:12
+        λ = readcsv("$PATH_DATA/dadp$COM/$i-values.csv")
+        if i in hasbat
+            plot(xtime, λ, c="darkcyan")
+        elseif i in haspv
+            plot(xtime, λ, c="yellowgreen")
+        else
+            plot(xtime, λ, c="k")
+        end
+    end
+
+    plot(xtime, p[1:end-1], label="Tariff", c="coral", lw=2.5)
+
     xlabel("Time [h]")
     ylabel("Multipliers [€]")
     xlim(0, xtime[end])
+    nhours = ceil(Int, nhours)
     xticks(0:3:nhours, 0:3:nhours)
     #= grid(which="major", axis="x") =#
     legend()
     seaborn.despine()
-    savefig("$PATH_DATA/plots/dadp-multipliers.pdf")
 end
 
 
-# QADP
-figure()
-λ = readcsv("$PATH_DATA/qadp/1-values.csv")
-nhours = size(λ, 1)/ 4
-xtime = vec(0:.25:nhours)[1:end-1]
-for i in 1:NNODES
-    λ = readcsv("$PATH_DATA/qadp/$i-values.csv")
-    plot(xtime, λ, label="Node $i")
+if true
+    # QADP
+    figure()
+    λ = readcsv("$PATH_DATA/qadp$COM/1-values.csv")
+    nhours = size(λ, 1)/ 4
+    xtime = vec(0:.25:nhours)[1:end-1]
+    haspv = [3, 5, 9, 11]
+    hasbat = [1, 4, 7, 10]
+    for i in 1:3
+        λ = readcsv("$PATH_DATA/qadp$COM/$i-values.csv")
+        if i in hasbat
+            plot(xtime, λ, label="Battery", c="darkcyan")
+        elseif i in haspv
+            plot(xtime, λ, label="PV", c="yellowgreen")
+        else
+            plot(xtime, λ, label="None", c="k")
+        end
+    end
+
+    for i in 4:12
+        λ = readcsv("$PATH_DATA/qadp$COM/$i-values.csv")
+        if i in hasbat
+            plot(xtime, λ, c="darkcyan")
+        elseif i in haspv
+            plot(xtime, λ, c="yellowgreen")
+        else
+            plot(xtime, λ, c="k")
+        end
+    end
+    xlabel("Time [h]")
+    ylabel("Injection flow [kW]")
+    xlim(0, xtime[end])
+    nhours = ceil(Int, nhours)
+    xticks(0:3:nhours, 0:3:nhours)
+    #= grid(which="major", axis="x") =#
+    legend()
+    seaborn.despine()
+    savefig("$PATH_DATA/plots/qadp-flows.pdf")
 end
-xlabel("Time [h]")
-ylabel("Injection flow [kW]")
-xlim(0, xtime[end])
-xticks(0:3:nhours, 0:3:nhours)
-#= grid(which="major", axis="x") =#
-legend()
-seaborn.despine()
-savefig("$PATH_DATA/plots/qadp-flows.pdf")

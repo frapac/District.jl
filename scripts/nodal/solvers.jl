@@ -54,7 +54,7 @@ function ipopt(pb; nsimu=1, sddpit=30, nit=10)
     f, grad! = District.oracle(pb, algo)
     nx       = size(pb.net.A, 1) * 95
     xL       = zeros(Float64, nx)
-    xU       = ones(Float64, nx)
+    xU       = .2 * ones(Float64, nx)
 
     eval_g(x, g) = nothing
     eval_jac_g(x, mode, rows, cols, values ) = nothing
@@ -145,7 +145,7 @@ function addtrace(pb, prob, vals, histmul)
         push!(vals, obj_value)
         push!(histmul, pb.nodes[1].conn.values...)
         last_value = (iter_count > 3)? objbuckets[end-2] : Inf
-        return last_value - obj_value > 0.02
+        return true #last_value - obj_value > 0.02
     end
     setIntermediateCallback(prob, intermediate)
 end

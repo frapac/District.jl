@@ -16,7 +16,7 @@ include("../utils.jl")
 
 srand(2713)
 
-ALGO = "SDDP"
+ALGO = "IPOPT"
 
 pb, xini = twelvehouse(nbins=10)
 
@@ -28,10 +28,10 @@ elseif ALGO == "QADP"
     _, algo = qadp(pb, nsimu=1000)
 elseif ALGO == "IPOPT"
     build!(pb, xini, PriceInterface, maxflow=6.)
-    prob, algo, vals, histmul = ipopt(pb, nsimu=500, nit=25)
+    prob, algo, vals, histmul = ipopt(pb, nsimu=500, nit=30, sddpit=20)
 elseif ALGO == "PADP"
     build!(pb, xini, FlowInterface, maxflow=6.)
-    prob, algo, vals, histmul = quantdec(pb, nsimu=500, nit=20, trace=true)
+    prob, algo, vals, histmul = quantdec(pb, nsimu=500, nit=20, trace=true, sddpit=20)
 elseif ALGO == "SDDP"
     build!(pb, xini, PriceInterface, maxflow=6.)
     model = @time District.getproblem(pb, DiscreteLawSampler(1, 1, Δn=1))
